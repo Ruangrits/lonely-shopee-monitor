@@ -1,4 +1,17 @@
-@import 'th-lonely-universe-web-lib/theme/app.css';
+@import "tailwindcss";
 
+/* Lonely Universe theme — exported paths */
+@import 'th-lonely-universe-web-lib/theme/theme.css';
+@import 'th-lonely-universe-web-lib/theme/safelist.css';
+
+/* Lonely Universe theme — direct dist paths (not in package exports) */
+@import '../node_modules/th-lonely-universe-web-lib/dist/theme/custom/custom.css';
+@import '../node_modules/th-lonely-universe-web-lib/dist/theme/font.css';
+@import '../node_modules/th-lonely-universe-web-lib/dist/theme/icon.css';
+
+@plugin "daisyui";
+
+/* Scan source files for Tailwind classes */
 @source "./lib/**/*.{html,js,svelte,ts}";
 @source "./routes/**/*.{html,js,svelte,ts}";
+@source "../node_modules/th-lonely-universe-web-lib/dist/**/*.{html,js,svelte,ts}";

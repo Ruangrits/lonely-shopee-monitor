@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    platform: linux/amd64
+    ports:
+      - "3001:3001"   # API
+      - "6080:6080"   # noVNC (เปิด browser ผ่าน web เมื่อต้อง verify)
+    environment:
+      - PORT=3001
+      - SHOPEE_USERNAME=${SHOPEE_USERNAME}
+      - SHOPEE_PASSWORD=${SHOPEE_PASSWORD}
+      - POLLING_INTERVAL=${POLLING_INTERVAL:-300}
+      - HEADLESS=false
+    volumes:
+      - browser-profile:/app/data/browser-profile
+      - cache-data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    platform: linux/amd64
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  browser-profile:
+  cache-data:

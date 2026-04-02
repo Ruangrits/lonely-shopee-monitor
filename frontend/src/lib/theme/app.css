@@ -1,1 +1,9 @@
-@import 'th-lonely-universe-web-lib/theme/app.css';
+@import "tailwindcss";
+
+@import 'th-lonely-universe-web-lib/theme/theme.css';
+@import 'th-lonely-universe-web-lib/theme/safelist.css';
+@import '../../../node_modules/th-lonely-universe-web-lib/dist/theme/custom/custom.css';
+@import '../../../node_modules/th-lonely-universe-web-lib/dist/theme/font.css';
+@import '../../../node_modules/th-lonely-universe-web-lib/dist/theme/icon.css';
+
+@plugin "daisyui";
