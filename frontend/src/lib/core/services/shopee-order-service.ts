@@ -1,7 +1,7 @@
 import { Blizzard } from 'th-lonely-universe-web-lib/blizzard'
 import { Either } from 'th-lonely-universe-web-lib/fp'
 import type { Future } from 'th-lonely-universe-web-lib/async'
-import type { AuthStatus, ScrapeResult, PollingStatus } from '$lib/modules/dashboard/data'
+import type { AuthStatus, MultiAccountResponse, PollingStatus } from '$lib/modules/dashboard/data'
 
 const API_BASE = 'http://localhost:3001'
 const client = Blizzard(API_BASE, { 'Content-Type': 'application/json' })
@@ -12,14 +12,14 @@ export const shopeeOrderService = {
 			.deserialize<unknown, AuthStatus>((j) => Either.Right(j as AuthStatus)).toFuture()
 	},
 
-	getSummary(): Future<unknown, ScrapeResult> {
+	getSummary(): Future<unknown, MultiAccountResponse> {
 		return client.get('/api/orders/summary').fetch().readToJson()
-			.deserialize<unknown, ScrapeResult>((j) => Either.Right(j as ScrapeResult)).toFuture()
+			.deserialize<unknown, MultiAccountResponse>((j) => Either.Right(j as MultiAccountResponse)).toFuture()
 	},
 
-	refreshOrders(): Future<unknown, ScrapeResult> {
+	refreshOrders(): Future<unknown, MultiAccountResponse> {
 		return client.post('/api/orders/refresh').withBody('{}').fetch().readToJson()
-			.deserialize<unknown, ScrapeResult>((j) => Either.Right(j as ScrapeResult)).toFuture()
+			.deserialize<unknown, MultiAccountResponse>((j) => Either.Right(j as MultiAccountResponse)).toFuture()
 	},
 
 	getPollingStatus(): Future<unknown, PollingStatus> {

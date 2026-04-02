@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { shopeeOrderService } from '$lib/core/services/shopee-order-service'
-	import type { OrderSummary, Order } from './data'
+	import type { OrderSummary, Order, AccountResult } from './data'
 	import TabFilter from './components/TabFilter.svelte'
 	import OrderCard from './components/OrderCard.svelte'
 	import LoginStatus from './components/LoginStatus.svelte'
@@ -18,7 +18,6 @@
 	let activeTab = $state('unprocessed')
 	let refreshing = $state(false)
 
-	// Filter orders ตาม active tab
 	const filteredOrders = $derived.by(() => {
 		if (activeTab === 'all') return toShipOrders
 		if (activeTab === 'unprocessed') return toShipOrders.filter((o) => o.status === 'ยังไม่ดำเนินการ')
@@ -26,13 +25,38 @@
 		return toShipOrders
 	})
 
+	function mergeAccounts(accounts: AccountResult[]) {
+		// รวม summary จากทุก accounts
+		const merged: OrderSummary = { unpaid: 0, toShip: 0, toShipUnprocessed: 0, toShipProcessed: 0, shipping: 0, completed: 0, cancelled: 0 }
+		const allOrders: Order[] = []
+
+		for (const acc of accounts) {
+			merged.unpaid += acc.summary.unpaid
+			merged.toShip += acc.summary.toShip
+			merged.toShipUnprocessed += acc.summary.toShipUnprocessed
+			merged.toShipProcessed += acc.summary.toShipProcessed
+			merged.shipping += acc.summary.shipping
+			merged.completed += acc.summary.completed
+			merged.cancelled += acc.summary.cancelled
+
+			// เพิ่ม accountName ให้แต่ละ order
+			for (const order of acc.toShipOrders) {
+				allOrders.push({ ...order, accountName: acc.accountName })
+			}
+		}
+
+		summary = merged
+		toShipOrders = allOrders
+		if (accounts.length > 0 && accounts[0].scrapedAt) {
+			lastScrapedAt = accounts[0].scrapedAt
+		}
+	}
+
 	async function loadData() {
 		const either = await shopeeOrderService.getSummary().promise
 		if (either.isRight) {
 			const data = either.getRight()
-			summary = data.summary
-			toShipOrders = data.toShipOrders || []
-			if (data.scrapedAt) lastScrapedAt = data.scrapedAt
+			mergeAccounts(data.accounts || [])
 		}
 	}
 
@@ -41,9 +65,7 @@
 		const either = await shopeeOrderService.refreshOrders().promise
 		if (either.isRight) {
 			const data = either.getRight()
-			summary = data.summary
-			toShipOrders = data.toShipOrders || []
-			lastScrapedAt = data.scrapedAt
+			mergeAccounts(data.accounts || [])
 		}
 		refreshing = false
 	}

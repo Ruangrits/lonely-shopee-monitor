@@ -16,6 +16,9 @@
 	<!-- Header -->
 	<div class="flex justify-between items-center mb-3">
 		<div class="flex items-center gap-2">
+			{#if order.accountName}
+				<span class="text-secondary-300 text-2xs font-semibold bg-secondary-50 px-2 py-0.5 rounded">{order.accountName}</span>
+			{/if}
 			<span class="text-primary-400 text-xs font-semibold">#{order.orderId}</span>
 			<span class="text-grey-200 text-xs">•</span>
 			<span class="text-grey-300 text-xs">👤 {order.buyerName || '-'}</span>

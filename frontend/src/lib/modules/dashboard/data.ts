@@ -11,6 +11,7 @@ export interface Order {
 	orderTime: string
 	items: OrderItem[]
 	status: string
+	accountName?: string
 }
 
 export interface OrderSummary {
@@ -23,15 +24,22 @@ export interface OrderSummary {
 	cancelled: number
 }
 
-export interface ScrapeResult {
+export interface AccountResult {
+	accountId: string
+	accountName: string
 	summary: OrderSummary
 	toShipOrders: Order[]
 	shippingOrders: Order[]
 	scrapedAt: string
 }
 
+export interface MultiAccountResponse {
+	accounts: AccountResult[]
+}
+
 export interface AuthStatus {
 	loggedIn: boolean
+	accounts?: Array<{ loggedIn: boolean }>
 }
 
 export interface PollingStatus {
