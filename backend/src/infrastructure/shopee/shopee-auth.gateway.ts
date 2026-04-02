@@ -7,13 +7,13 @@ import { execSync } from 'child_process'
 const SELLER_CENTRE_URL = 'https://seller.shopee.co.th'
 const LOGIN_URL = `${SELLER_CENTRE_URL}/account/signin`
 const ORDER_URL = `${SELLER_CENTRE_URL}/portal/sale`
-const USER_DATA_DIR = path.resolve('./data/browser-profile')
-
 export class ShopeeAuthGateway implements AuthGateway {
   private context: BrowserContext | null = null
   private page: Page | null = null
   private loggedIn = false
   private _cookies: string = ''
+
+  constructor(private profileDir: string) {}
 
   get cookies(): string { return this._cookies }
 
@@ -23,7 +23,7 @@ export class ShopeeAuthGateway implements AuthGateway {
 
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        this.context = await chromium.launchPersistentContext(USER_DATA_DIR, {
+        this.context = await chromium.launchPersistentContext(this.profileDir, {
           headless,
           args: ['--no-sandbox', '--disable-blink-features=AutomationControlled'],
           viewport: { width: 1280, height: 800 },
@@ -38,7 +38,7 @@ export class ShopeeAuthGateway implements AuthGateway {
         console.error(`Launch attempt ${attempt} failed:`, msg)
         if (msg.includes('ProcessSingleton') || msg.includes('profile directory')) {
           try { execSync('pkill -f "Google Chrome for Testing.*browser-profile" 2>/dev/null || true') } catch { /* */ }
-          const lockFile = path.join(USER_DATA_DIR, 'SingletonLock')
+          const lockFile = path.join(this.profileDir, 'SingletonLock')
           if (fs.existsSync(lockFile)) fs.rmSync(lockFile)
           await new Promise((r) => setTimeout(r, 2000))
         } else {

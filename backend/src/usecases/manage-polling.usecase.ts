@@ -3,12 +3,16 @@ import type { FetchOrdersUseCase } from './fetch-orders.usecase.js'
 
 export class ManagePollingUseCase {
   constructor(
-    private fetchOrders: FetchOrdersUseCase,
+    private fetchOrdersList: FetchOrdersUseCase[],
     private scheduler: Scheduler,
   ) {}
 
   start(): void {
-    this.scheduler.start(() => { this.fetchOrders.execute() }, this.scheduler.getIntervalMs())
+    this.scheduler.start(async () => {
+      for (const fetchOrders of this.fetchOrdersList) {
+        await fetchOrders.execute()
+      }
+    }, this.scheduler.getIntervalMs())
   }
 
   stop(): void {

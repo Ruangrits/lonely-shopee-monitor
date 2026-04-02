@@ -8,7 +8,11 @@ const ORDER_URL = `${SELLER_CENTRE_URL}/portal/sale`
 const SHOPEE_IMAGE_CDN = 'https://cf.shopee.co.th/file/'
 
 export class ShopeeApiGateway implements OrderGateway {
-  constructor(private auth: ShopeeAuthGateway) {}
+  constructor(
+    private auth: ShopeeAuthGateway,
+    private accountId: string = '',
+    private accountName: string = '',
+  ) {}
 
   private getHeaders(): Record<string, string> {
     return {
@@ -188,6 +192,8 @@ export class ShopeeApiGateway implements OrderGateway {
     console.log(`Orders: toShip=${toShipOrders.length} (unprocessed=${unprocessedCount}, processed=${processedCount}), shipping=${shippingOrders.length}`)
 
     return {
+      accountId: this.accountId,
+      accountName: this.accountName,
       summary: {
         unpaid: tabMeta.unpaid,
         toShip: tabMeta.toShip || toShipIndexes.length,

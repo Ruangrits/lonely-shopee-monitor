@@ -24,6 +24,8 @@ export interface OrderSummary {
 }
 
 export interface ScrapeResult {
+  accountId: string
+  accountName: string
   summary: OrderSummary
   toShipOrders: Order[]
   shippingOrders: Order[]
@@ -43,6 +45,7 @@ export interface Account {
 }
 
 export function summaryChanged(a: ScrapeResult, b: ScrapeResult): boolean {
+  if (a.accountId !== b.accountId) return true
   const sa = a.summary
   const sb = b.summary
   return sa.toShip !== sb.toShip
@@ -57,6 +60,8 @@ export function summaryChanged(a: ScrapeResult, b: ScrapeResult): boolean {
 }
 
 export const EMPTY_RESULT: ScrapeResult = {
+  accountId: '',
+  accountName: '',
   summary: { unpaid: 0, toShip: 0, toShipUnprocessed: 0, toShipProcessed: 0, shipping: 0, completed: 0, cancelled: 0 },
   toShipOrders: [],
   shippingOrders: [],
