@@ -15,19 +15,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install dependencies
+# Install all dependencies (including dev for TypeScript build)
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 
 # Install Playwright Chromium
 RUN npx playwright install chromium
 
-# Copy source
+# Copy source & build TypeScript
 COPY tsconfig.json ./
 COPY src/ ./src/
-
-# Build TypeScript
 RUN npm run build
+
+# Remove devDependencies after build
+RUN npm prune --omit=dev
 
 # Create data directories
 RUN mkdir -p /app/data/browser-profile
