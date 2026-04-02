@@ -7,15 +7,85 @@ import { execSync } from 'child_process'
 const SELLER_CENTRE_URL = 'https://seller.shopee.co.th'
 const LOGIN_URL = `${SELLER_CENTRE_URL}/account/signin`
 const ORDER_URL = `${SELLER_CENTRE_URL}/portal/sale`
+
 export class ShopeeAuthGateway implements AuthGateway {
   private context: BrowserContext | null = null
   private page: Page | null = null
   private loggedIn = false
   private _cookies: string = ''
+  private cookiesFilePath: string
 
-  constructor(private profileDir: string) {}
+  constructor(private profileDir: string) {
+    this.cookiesFilePath = path.join(path.dirname(profileDir), `cookies-${path.basename(profileDir)}.json`)
+    this.loadCookiesFromFile()
+  }
 
   get cookies(): string { return this._cookies }
+
+  // ===================== COOKIES FILE =====================
+
+  private loadCookiesFromFile() {
+    try {
+      if (fs.existsSync(this.cookiesFilePath)) {
+        const data = JSON.parse(fs.readFileSync(this.cookiesFilePath, 'utf-8'))
+        this._cookies = data.cookies || ''
+        if (this._cookies) {
+          console.log(`Cookies loaded from file: ${this.cookiesFilePath}`)
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  private saveCookiesToFile() {
+    try {
+      const dir = path.dirname(this.cookiesFilePath)
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+      fs.writeFileSync(this.cookiesFilePath, JSON.stringify({ cookies: this._cookies, savedAt: new Date().toISOString() }), 'utf-8')
+      console.log(`Cookies saved to file`)
+    } catch (err) {
+      console.error('Failed to save cookies:', err)
+    }
+  }
+
+  // ===================== API CHECK (no browser needed) =====================
+
+  async tryApiCheck(): Promise<boolean> {
+    if (!this._cookies) return false
+
+    try {
+      const match = this._cookies.match(/SPC_CDS=([^;]+)/)
+      const spcCds = match ? match[1] : ''
+      const url = `${SELLER_CENTRE_URL}/api/v3/order/get_order_list_meta_v2${spcCds ? `?SPC_CDS=${spcCds}&SPC_CDS_VER=2` : ''}`
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Cookie': this._cookies,
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+          'Referer': ORDER_URL,
+        },
+        body: '{}',
+      })
+
+      if (!res.ok) return false
+
+      const data = await res.json() as { code: number }
+      if (data.code === 0) {
+        this.loggedIn = true
+        console.log('API check passed — session still valid (no browser needed)')
+        return true
+      }
+
+      return false
+    } catch {
+      return false
+    }
+  }
+
+  // ===================== BROWSER / AUTH =====================
 
   async launch() {
     await this.close()
@@ -54,14 +124,15 @@ export class ShopeeAuthGateway implements AuthGateway {
   private async checkExistingSession() {
     if (!this.page) return
     try {
-      console.log('Checking existing session...')
+      console.log('Checking existing session via browser...')
       await this.page.goto(ORDER_URL, { waitUntil: 'domcontentloaded', timeout: 15000 })
       await this.page.waitForTimeout(3000)
       const currentUrl = this.page.url()
       if (currentUrl.includes('/portal') || currentUrl.includes('is_from_login') || currentUrl === `${SELLER_CENTRE_URL}/`) {
         this.loggedIn = true
         await this.extractCookies()
-        console.log('Existing session active — cookies extracted')
+        this.saveCookiesToFile()
+        console.log('Existing session active — cookies extracted & saved')
       } else {
         console.log('No existing session — login required')
       }
@@ -119,6 +190,7 @@ export class ShopeeAuthGateway implements AuthGateway {
         await this.page.waitForURL((url) => url.pathname.includes('/portal') || url.search.includes('is_from_login'), { timeout: 10000 })
         this.loggedIn = true
         await this.extractCookies()
+        this.saveCookiesToFile()
         return { success: true, needsVerification: false }
       } catch {
         const pageContent = await this.page.content()
@@ -138,6 +210,7 @@ export class ShopeeAuthGateway implements AuthGateway {
       await this.page.waitForURL((url) => url.pathname.includes('/portal') || url.search.includes('is_from_login'), { timeout: 120000 })
       this.loggedIn = true
       await this.extractCookies()
+      this.saveCookiesToFile()
       return { success: true }
     } catch {
       return { success: false, error: 'หมดเวลารอการยืนยัน' }
@@ -151,7 +224,13 @@ export class ShopeeAuthGateway implements AuthGateway {
     console.log(`Extracted ${cookies.length} cookies`)
   }
 
+  // ===================== STATE =====================
+
   isActive(): boolean {
+    // ถ้ามี cookies + loggedIn = true (ไม่ว่าจะมี browser หรือไม่)
+    if (this.loggedIn && this._cookies) return true
+
+    // ถ้ามี browser context เปิดอยู่
     if (this.loggedIn && this.context) {
       try {
         if (this.context.pages().length === 0) { this.reset(); return false }
@@ -159,6 +238,11 @@ export class ShopeeAuthGateway implements AuthGateway {
       } catch { this.reset(); return false }
     }
     return false
+  }
+
+  markSessionExpired() {
+    this.loggedIn = false
+    console.log('Session marked as expired')
   }
 
   private reset() {
@@ -171,8 +255,10 @@ export class ShopeeAuthGateway implements AuthGateway {
   async close() {
     if (this.context) {
       await this.context.close().catch(() => {})
-      this.reset()
-      console.log('Browser closed')
+      // keep cookies in memory + file for API-only mode
+      this.context = null
+      this.page = null
+      console.log('Browser closed (cookies preserved)')
     }
   }
 }
