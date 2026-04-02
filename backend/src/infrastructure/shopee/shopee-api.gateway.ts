@@ -1,6 +1,6 @@
 import type { OrderGateway } from '../../domain/ports.js'
 import type { ScrapeResult, Order, OrderItem, OrderSummary } from '../../domain/entities.js'
-import { EMPTY_RESULT } from '../../domain/entities.js'
+import { EMPTY_RESULT, Platform } from '../../domain/entities.js'
 import type { ShopeeAuthGateway } from './shopee-auth.gateway.js'
 
 const SELLER_CENTRE_URL = 'https://seller.shopee.co.th'
@@ -194,6 +194,7 @@ export class ShopeeApiGateway implements OrderGateway {
     return {
       accountId: this.accountId,
       accountName: this.accountName,
+      platform: Platform.Shopee,
       summary: {
         unpaid: tabMeta.unpaid,
         toShip: tabMeta.toShip || toShipIndexes.length,

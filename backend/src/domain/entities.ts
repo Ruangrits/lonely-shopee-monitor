@@ -26,6 +26,7 @@ export interface OrderSummary {
 export interface ScrapeResult {
   accountId: string
   accountName: string
+  platform: Platform
   summary: OrderSummary
   toShipOrders: Order[]
   shippingOrders: Order[]
@@ -62,6 +63,7 @@ export function summaryChanged(a: ScrapeResult, b: ScrapeResult): boolean {
 export const EMPTY_RESULT: ScrapeResult = {
   accountId: '',
   accountName: '',
+  platform: Platform.Shopee,
   summary: { unpaid: 0, toShip: 0, toShipUnprocessed: 0, toShipProcessed: 0, shipping: 0, completed: 0, cancelled: 0 },
   toShipOrders: [],
   shippingOrders: [],

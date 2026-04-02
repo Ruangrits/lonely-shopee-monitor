@@ -3,14 +3,7 @@
 	import type { OrderSummary, Order, AccountResult } from './data'
 	import TabFilter from './components/TabFilter.svelte'
 	import OrderCard from './components/OrderCard.svelte'
-	import LoginStatus from './components/LoginStatus.svelte'
 	import { onMount } from 'svelte'
-
-	let {
-		loggedIn = false
-	}: {
-		loggedIn?: boolean
-	} = $props()
 
 	let summary = $state<OrderSummary>({ unpaid: 0, toShip: 0, toShipUnprocessed: 0, toShipProcessed: 0, shipping: 0, completed: 0, cancelled: 0 })
 	let toShipOrders = $state<Order[]>([])
@@ -41,7 +34,7 @@
 
 			// เพิ่ม accountName ให้แต่ละ order
 			for (const order of acc.toShipOrders) {
-				allOrders.push({ ...order, accountName: acc.accountName })
+				allOrders.push({ ...order, accountName: acc.accountName, platform: acc.platform })
 			}
 		}
 
@@ -93,12 +86,9 @@
 		<div class="flex justify-between items-center mb-6">
 			<div>
 				<h1 class="text-2xl font-bold text-grey-400">คำสั่งซื้อที่รอจัดส่ง</h1>
-				<div class="flex items-center gap-3 mt-1">
-					<LoginStatus {loggedIn} />
-					{#if lastScrapedAt}
-						<span class="text-grey-200 text-xs">อัปเดต: {formatTime(lastScrapedAt)}</span>
-					{/if}
-				</div>
+				{#if lastScrapedAt}
+					<span class="text-grey-200 text-xs mt-1">อัปเดต: {formatTime(lastScrapedAt)}</span>
+				{/if}
 			</div>
 			<button
 				class="bg-primary-400 hover:bg-primary-500 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"

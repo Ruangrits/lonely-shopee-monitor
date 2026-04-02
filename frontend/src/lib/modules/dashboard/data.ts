@@ -5,6 +5,8 @@ export interface OrderItem {
 	imageUrl: string
 }
 
+export type Platform = 'shopee' | 'lazada' | 'tiktok'
+
 export interface Order {
 	orderId: string
 	buyerName: string
@@ -12,6 +14,7 @@ export interface Order {
 	items: OrderItem[]
 	status: string
 	accountName?: string
+	platform?: Platform
 }
 
 export interface OrderSummary {
@@ -27,6 +30,7 @@ export interface OrderSummary {
 export interface AccountResult {
 	accountId: string
 	accountName: string
+	platform: Platform
 	summary: OrderSummary
 	toShipOrders: Order[]
 	shippingOrders: Order[]

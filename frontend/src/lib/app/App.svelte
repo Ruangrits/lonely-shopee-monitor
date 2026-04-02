@@ -39,7 +39,7 @@
 		</VBox>
 	</div>
 {:else if loggedIn}
-	<Dashboard {loggedIn} />
+	<Dashboard />
 {:else}
 	<div class="flex items-center justify-center min-h-screen">
 		<div class="max-w-md p-6 bg-white rounded-xl shadow-lg text-center">
