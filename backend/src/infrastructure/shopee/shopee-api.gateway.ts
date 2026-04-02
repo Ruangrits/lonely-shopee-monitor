@@ -14,43 +14,39 @@ export class ShopeeApiGateway implements OrderGateway {
     private accountName: string = '',
   ) {}
 
-  private getHeaders(): Record<string, string> {
-    return {
-      'Cookie': this.auth.cookies,
-      'Content-Type': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-      'Referer': ORDER_URL,
-      'X-Requested-With': 'XMLHttpRequest',
-    }
+  /** Make API call through browser context to bypass anti-bot checks */
+  private async browserPost(endpoint: string, body: unknown): Promise<unknown> {
+    const page = this.auth.getPage()
+    if (!page) throw new Error('No browser page available')
+
+    return page.evaluate(
+      async ({ endpoint, body }) => {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        return res.json()
+      },
+      { endpoint: `${SELLER_CENTRE_URL}${endpoint}`, body },
+    )
   }
 
-  private buildUrl(endpoint: string): string {
-    const match = this.auth.cookies.match(/SPC_CDS=([^;]+)/)
-    const spcCds = match ? match[1] : ''
-    const sep = endpoint.includes('?') ? '&' : '?'
-    return `${SELLER_CENTRE_URL}${endpoint}${spcCds ? `${sep}SPC_CDS=${spcCds}&SPC_CDS_VER=2` : ''}`
-  }
-
-  private async apiPost(endpoint: string, body: unknown): Promise<unknown> {
-    const res = await fetch(this.buildUrl(endpoint), {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(body),
-    })
-    if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`)
-    return res.json()
-  }
-
-  private async getOrderIndexes(tab: number, actionFilter = 0): Promise<Array<{ order_id: number; shop_id: number; region_id: string }>> {
-    const data = await this.apiPost('/api/v3/order/search_order_list_index', {
+  private async getOrderIndexes(tab: number): Promise<Array<{ order_id: number; shop_id: number; region_id: string }>> {
+    const data = await this.browserPost('/api/v3/order/search_order_list_index', {
       order_list_tab: tab,
       entity_type: 1,
       pagination: { from_page_number: 1, page_number: 1, page_size: 40 },
-      filter: { fulfillment_type: 0, is_drop_off: 0, fulfillment_source: 0, action_filter: actionFilter },
+      filter: { fulfillment_type: 0, is_drop_off: 0, fulfillment_source: 0, action_filter: 0 },
       sort: { sort_type: 3, ascending: false },
     }) as { code: number; data: { index_list: Array<{ order_id: number; shop_id: number; region_id: string }> } }
 
-    return data.code === 0 ? data.data.index_list : []
+    if (data.code !== 0) {
+      console.warn(`Order index API error: code=${data.code} (tab=${tab})`)
+      this.auth.markSessionExpired()
+      return []
+    }
+    return data.data.index_list
   }
 
   private parseOrderTime(orderSn: string): string {
@@ -73,7 +69,7 @@ export class ShopeeApiGateway implements OrderGateway {
       const batch = orderParams.slice(i, i + batchSize)
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data = await this.apiPost('/api/v3/order/get_order_list_card_list', {
+        const data = await this.browserPost('/api/v3/order/get_order_list_card_list', {
           order_list_tab: tab,
           need_count_down_desc: true,
           order_param_list: batch,
@@ -133,13 +129,13 @@ export class ShopeeApiGateway implements OrderGateway {
     return orders
   }
 
-  private async getTabMeta(): Promise<Omit<OrderSummary, 'toShipUnprocessed' | 'toShipProcessed'>> {
+  private async getTabMeta(): Promise<OrderSummary> {
     try {
-      const data = await this.apiPost('/api/v3/order/get_order_list_meta_v2', {}) as {
+      const data = await this.browserPost('/api/v3/order/get_order_list_meta_v2', {}) as {
         code: number
         data: {
           OrderListTabMeta: Array<{
-            to_ship_tab_meta?: { l1_meta: number }
+            to_ship_tab_meta?: { l1_meta: number; l2_meta_list?: Array<{ status: number; count: number }> }
             shipping_tab_meta?: { l1_meta: number }
             completed_tab_meta?: { l1_meta: number }
             cancellation_tab_meta?: { l1_meta: number }
@@ -150,9 +146,15 @@ export class ShopeeApiGateway implements OrderGateway {
 
       if (data.code === 0 && data.data.OrderListTabMeta?.[0]) {
         const meta = data.data.OrderListTabMeta[0]
+        const toShipMeta = meta.to_ship_tab_meta
+        // l2_meta_list: status=1 → unprocessed, status=2 → processed
+        const unprocessed = toShipMeta?.l2_meta_list?.find(m => m.status === 1)?.count || 0
+        const processed = toShipMeta?.l2_meta_list?.find(m => m.status === 2)?.count || 0
         return {
           unpaid: meta.unpaid_tab_meta?.l1_meta || 0,
-          toShip: meta.to_ship_tab_meta?.l1_meta || 0,
+          toShip: toShipMeta?.l1_meta || 0,
+          toShipUnprocessed: unprocessed,
+          toShipProcessed: processed,
           shipping: meta.shipping_tab_meta?.l1_meta || 0,
           completed: meta.completed_tab_meta?.l1_meta || 0,
           cancelled: meta.cancellation_tab_meta?.l1_meta || 0,
@@ -161,13 +163,26 @@ export class ShopeeApiGateway implements OrderGateway {
     } catch (err) {
       console.log('Tab meta API failed:', err instanceof Error ? err.message : err)
     }
-    return { unpaid: 0, toShip: 0, shipping: 0, completed: 0, cancelled: 0 }
+    return { unpaid: 0, toShip: 0, toShipUnprocessed: 0, toShipProcessed: 0, shipping: 0, completed: 0, cancelled: 0 }
   }
 
   async fetchAll(): Promise<ScrapeResult> {
-    if (!this.auth.cookies) { console.log('No cookies'); return EMPTY_RESULT }
+    if (!this.auth.getPage()) {
+      console.log('No browser page — cannot fetch')
+      return EMPTY_RESULT
+    }
 
-    console.log('Fetching orders via API...')
+    console.log('Fetching orders via browser API...')
+
+    // Navigate to order page first to ensure correct context
+    const page = this.auth.getPage()!
+    try {
+      const currentUrl = page.url()
+      if (!currentUrl.includes('seller.shopee.co.th')) {
+        await page.goto(ORDER_URL, { waitUntil: 'domcontentloaded', timeout: 15000 })
+        await page.waitForTimeout(2000)
+      }
+    } catch { /* ignore nav errors */ }
 
     const tabMeta = await this.getTabMeta()
 
@@ -182,14 +197,14 @@ export class ShopeeApiGateway implements OrderGateway {
       this.getOrderCards(400, shippingIndexes),
     ])
 
+    // Use tab meta for unprocessed/processed counts (more reliable than card status)
     for (const order of toShipOrders) {
-      order.status = order.status === 'ที่ต้องจัดส่ง' ? 'ยังไม่ดำเนินการ' : 'ดำเนินการแล้ว'
+      if (!order.status || order.status === 'ที่ต้องจัดส่ง') {
+        order.status = 'ยังไม่ดำเนินการ'
+      }
     }
 
-    const unprocessedCount = toShipOrders.filter((o) => o.status === 'ยังไม่ดำเนินการ').length
-    const processedCount = toShipOrders.filter((o) => o.status === 'ดำเนินการแล้ว').length
-
-    console.log(`Orders: toShip=${toShipOrders.length} (unprocessed=${unprocessedCount}, processed=${processedCount}), shipping=${shippingOrders.length}`)
+    console.log(`Orders: toShip=${toShipOrders.length} (meta: unprocessed=${tabMeta.toShipUnprocessed}, processed=${tabMeta.toShipProcessed}), shipping=${shippingOrders.length}`)
 
     return {
       accountId: this.accountId,
@@ -197,10 +212,10 @@ export class ShopeeApiGateway implements OrderGateway {
       platform: Platform.Shopee,
       summary: {
         unpaid: tabMeta.unpaid,
-        toShip: tabMeta.toShip || toShipIndexes.length,
-        toShipUnprocessed: unprocessedCount,
-        toShipProcessed: processedCount,
-        shipping: tabMeta.shipping || shippingIndexes.length,
+        toShip: tabMeta.toShip || toShipOrders.length,
+        toShipUnprocessed: tabMeta.toShipUnprocessed,
+        toShipProcessed: tabMeta.toShipProcessed,
+        shipping: tabMeta.shipping || shippingOrders.length,
         completed: tabMeta.completed,
         cancelled: tabMeta.cancelled,
       },

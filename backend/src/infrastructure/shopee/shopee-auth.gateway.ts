@@ -22,6 +22,8 @@ export class ShopeeAuthGateway implements AuthGateway {
 
   get cookies(): string { return this._cookies }
 
+  getPage(): Page | null { return this.page }
+
   // ===================== COOKIES FILE =====================
 
   private loadCookiesFromFile() {
@@ -59,6 +61,7 @@ export class ShopeeAuthGateway implements AuthGateway {
       const spcCds = match ? match[1] : ''
       const url = `${SELLER_CENTRE_URL}/api/v3/order/get_order_list_meta_v2${spcCds ? `?SPC_CDS=${spcCds}&SPC_CDS_VER=2` : ''}`
 
+      const csrfMatch = this._cookies.match(/csrftoken=([^;]+)/)
       const res = await fetch(url, {
         method: 'POST',
         headers: {
@@ -66,18 +69,21 @@ export class ShopeeAuthGateway implements AuthGateway {
           'Content-Type': 'application/json',
           'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
           'Referer': ORDER_URL,
+          ...(csrfMatch ? { 'X-CSRFToken': csrfMatch[1] } : {}),
         },
         body: '{}',
       })
 
       if (!res.ok) return false
 
-      const data = await res.json() as { code: number }
-      if (data.code === 0) {
+      const data = await res.json() as { code: number; data?: { OrderListTabMeta?: unknown[] } }
+      if (data.code === 0 && data.data?.OrderListTabMeta?.length) {
         this.loggedIn = true
         console.log('API check passed — session still valid (no browser needed)')
         return true
       }
+
+      console.log('API check failed — code:', data.code, 'meta:', data.data?.OrderListTabMeta?.length ?? 0)
 
       return false
     } catch {
