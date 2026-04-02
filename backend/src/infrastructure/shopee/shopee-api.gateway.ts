@@ -1,6 +1,6 @@
 import type { OrderGateway } from '../../domain/ports.js'
 import type { ScrapeResult, Order, OrderItem, OrderSummary } from '../../domain/entities.js'
-import { EMPTY_RESULT } from '../../domain/entities.js'
+import { EMPTY_RESULT, Platform } from '../../domain/entities.js'
 import type { ShopeeAuthGateway } from './shopee-auth.gateway.js'
 
 const SELLER_CENTRE_URL = 'https://seller.shopee.co.th'
@@ -8,7 +8,11 @@ const ORDER_URL = `${SELLER_CENTRE_URL}/portal/sale`
 const SHOPEE_IMAGE_CDN = 'https://cf.shopee.co.th/file/'
 
 export class ShopeeApiGateway implements OrderGateway {
-  constructor(private auth: ShopeeAuthGateway) {}
+  constructor(
+    private auth: ShopeeAuthGateway,
+    private accountId: string = '',
+    private accountName: string = '',
+  ) {}
 
   private getHeaders(): Record<string, string> {
     return {
@@ -188,6 +192,9 @@ export class ShopeeApiGateway implements OrderGateway {
     console.log(`Orders: toShip=${toShipOrders.length} (unprocessed=${unprocessedCount}, processed=${processedCount}), shipping=${shippingOrders.length}`)
 
     return {
+      accountId: this.accountId,
+      accountName: this.accountName,
+      platform: Platform.Shopee,
       summary: {
         unpaid: tabMeta.unpaid,
         toShip: tabMeta.toShip || toShipIndexes.length,

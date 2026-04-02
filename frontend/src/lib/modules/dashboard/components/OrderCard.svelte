@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Order } from '../data'
+	import PlatformLogo from './PlatformLogo.svelte'
 
 	let { order }: { order: Order } = $props()
 
@@ -16,6 +17,11 @@
 	<!-- Header -->
 	<div class="flex justify-between items-center mb-3">
 		<div class="flex items-center gap-2">
+			<PlatformLogo platform={order.platform} size={20} />
+			{#if order.accountName}
+				<span class="text-grey-400 text-2xs font-semibold">{order.accountName}</span>
+			{/if}
+			<span class="text-grey-200 text-xs">•</span>
 			<span class="text-primary-400 text-xs font-semibold">#{order.orderId}</span>
 			<span class="text-grey-200 text-xs">•</span>
 			<span class="text-grey-300 text-xs">👤 {order.buyerName || '-'}</span>

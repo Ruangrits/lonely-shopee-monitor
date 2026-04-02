@@ -2,12 +2,19 @@ import type { AuthGateway } from '../domain/ports.js'
 
 export class CheckAuthUseCase {
   constructor(
-    private auth: AuthGateway,
+    private auth: AuthGateway & { tryApiCheck?: () => Promise<boolean> },
     private username: string,
     private password: string,
   ) {}
 
   async execute(): Promise<{ loggedIn: boolean }> {
+    // Step 1: ถ้ามี cookies เก่า → ลอง API check ก่อน (ไม่ต้องเปิด browser)
+    if (!this.auth.isActive() && this.auth.tryApiCheck) {
+      const apiOk = await this.auth.tryApiCheck()
+      if (apiOk) return { loggedIn: true }
+    }
+
+    // Step 2: ถ้า API check fail → เปิด browser + login
     if (!this.auth.isActive()) {
       await this.auth.launch()
     }

@@ -24,6 +24,6 @@
 		"vite": "^7.3.1"
 	},
 	"dependencies": {
-		"th-lonely-universe-web-lib": "file:../../lonely-web-lib"
+		"th-lonely-universe-web-lib": "^0.0.5"
 	}
 }
