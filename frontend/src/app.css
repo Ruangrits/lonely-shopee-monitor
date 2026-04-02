@@ -1,0 +1,4 @@
+@import 'th-lonely-universe-web-lib/theme/app.css';
+
+@source "./lib/**/*.{html,js,svelte,ts}";
+@source "./routes/**/*.{html,js,svelte,ts}";
