@@ -20,6 +20,9 @@ import type { ScrapeResult } from './domain/entities.js'
 
 dotenv.config()
 
+// --- Data directory (configurable via .env) ---
+const dataDir = path.resolve(process.env.DATA_DIR || './data')
+
 // --- Accounts config ---
 const accounts = [
   {
@@ -27,16 +30,16 @@ const accounts = [
     name: 'lonely universe',
     username: process.env.SHOPEE_USERNAME || '',
     password: process.env.SHOPEE_PASSWORD || '',
-    profileDir: path.resolve('./data/browser-profile-1'),
-    cacheFile: './data/cache-1.json',
+    profileDir: path.join(dataDir, 'browser-profile-1'),
+    cacheFile: path.join(dataDir, 'cache-1.json'),
   },
   {
     id: 'alone-in-universe',
     name: 'alone in universe',
     username: process.env.SHOPEE_USERNAME_2 || '',
     password: process.env.SHOPEE_PASSWORD_2 || '',
-    profileDir: path.resolve('./data/browser-profile-2'),
-    cacheFile: './data/cache-2.json',
+    profileDir: path.join(dataDir, 'browser-profile-2'),
+    cacheFile: path.join(dataDir, 'cache-2.json'),
   },
 ].filter((a) => a.username) // only create accounts with credentials
 
