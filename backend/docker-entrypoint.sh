@@ -1,6 +1,17 @@
 #!/bin/bash
 set -e
 
+# Initialize pre-saved cookies from image if not already in volume
+mkdir -p /app/data
+for cookies_file in /app/cookies-init/cookies-*.json; do
+    [ -f "$cookies_file" ] || continue
+    target="/app/data/$(basename "$cookies_file")"
+    if [ ! -f "$target" ]; then
+        cp "$cookies_file" "$target"
+        echo "Initialized cookies: $(basename "$cookies_file")"
+    fi
+done
+
 # Start virtual display
 Xvfb :99 -screen 0 1280x800x24 &
 sleep 1
