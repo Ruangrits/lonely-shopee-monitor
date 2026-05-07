@@ -5,7 +5,7 @@
 	import OrderCard from './components/OrderCard.svelte'
 	import { onMount } from 'svelte'
 
-	let summary = $state<OrderSummary>({ unpaid: 0, toShip: 0, toShipUnprocessed: 0, toShipProcessed: 0, shipping: 0, completed: 0, cancelled: 0 })
+	let summary = $state<OrderSummary>({ toShip: 0, toShipUnprocessed: 0, toShipProcessed: 0 })
 	let toShipOrders = $state<Order[]>([])
 	let lastScrapedAt = $state('')
 	let activeTab = $state('unprocessed')
@@ -19,20 +19,14 @@
 	})
 
 	function mergeAccounts(accounts: AccountResult[]) {
-		// รวม summary จากทุก accounts
-		const merged: OrderSummary = { unpaid: 0, toShip: 0, toShipUnprocessed: 0, toShipProcessed: 0, shipping: 0, completed: 0, cancelled: 0 }
+		const merged: OrderSummary = { toShip: 0, toShipUnprocessed: 0, toShipProcessed: 0 }
 		const allOrders: Order[] = []
 
 		for (const acc of accounts) {
-			merged.unpaid += acc.summary.unpaid
 			merged.toShip += acc.summary.toShip
 			merged.toShipUnprocessed += acc.summary.toShipUnprocessed
 			merged.toShipProcessed += acc.summary.toShipProcessed
-			merged.shipping += acc.summary.shipping
-			merged.completed += acc.summary.completed
-			merged.cancelled += acc.summary.cancelled
 
-			// เพิ่ม accountName ให้แต่ละ order
 			for (const order of acc.toShipOrders) {
 				allOrders.push({ ...order, accountName: acc.accountName, platform: acc.platform })
 			}
@@ -74,28 +68,26 @@
 
 	onMount(() => {
 		loadData()
-		const id = setInterval(loadData, 60_000)
-		return () => clearInterval(id)
 	})
 </script>
 
-<div class="min-h-screen bg-grey-50 p-6">
+<div class="min-h-screen bg-grey-50 p-3 sm:p-6">
 	<div class="max-w-3xl mx-auto">
 
 		<!-- Header -->
-		<div class="flex justify-between items-center mb-6">
+		<div class="flex justify-between items-start gap-2 mb-5 sm:mb-6">
 			<div>
-				<h1 class="text-2xl font-bold text-grey-400">คำสั่งซื้อที่รอจัดส่ง</h1>
+				<h1 class="text-xl sm:text-2xl font-bold text-grey-400">คำสั่งซื้อที่รอจัดส่ง</h1>
 				{#if lastScrapedAt}
 					<span class="text-grey-200 text-xs mt-1">อัปเดต: {formatTime(lastScrapedAt)}</span>
 				{/if}
 			</div>
 			<button
-				class="bg-primary-400 hover:bg-primary-500 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+				class="bg-primary-400 hover:bg-primary-500 text-white px-3 sm:px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 shrink-0"
 				onclick={handleRefresh}
 				disabled={refreshing}
 			>
-				{refreshing ? '...' : '🔄 Refresh'}
+				{refreshing ? '...' : 'Refresh'}
 			</button>
 		</div>
 

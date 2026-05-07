@@ -31,7 +31,10 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 # Create data directories
-RUN mkdir -p /app/data/browser-profile
+RUN mkdir -p /app/data/browser-profile-1 /app/cookies-init
+
+# Bundle pre-saved cookies for headless deployment
+COPY data/.gitkeep data/cookies-*.json* /app/cookies-init/
 
 # VNC + noVNC startup script
 COPY docker-entrypoint.sh /docker-entrypoint.sh
@@ -41,7 +44,6 @@ RUN chmod +x /docker-entrypoint.sh
 EXPOSE 3001 6080
 
 ENV PORT=3001
-ENV HEADLESS=true
 ENV DISPLAY=:99
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

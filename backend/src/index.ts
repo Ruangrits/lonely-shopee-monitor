@@ -62,7 +62,7 @@ for (const account of accounts) {
 const scheduler = new IntervalScheduler(
   parseInt(process.env.POLLING_INTERVAL || '300') * 1000
 )
-const managePolling = new ManagePollingUseCase(fetchOrdersList, scheduler)
+const managePolling = new ManagePollingUseCase(fetchOrdersList, checkAuthList, scheduler)
 
 // --- App ---
 const app = express()

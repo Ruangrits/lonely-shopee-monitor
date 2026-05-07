@@ -20,8 +20,6 @@ export class ShopeeAuthGateway implements AuthGateway {
     this.loadCookiesFromFile()
   }
 
-  get cookies(): string { return this._cookies }
-
   getPage(): Page | null { return this.page }
 
   // ===================== COOKIES FILE =====================
@@ -48,46 +46,6 @@ export class ShopeeAuthGateway implements AuthGateway {
       console.log(`Cookies saved to file`)
     } catch (err) {
       console.error('Failed to save cookies:', err)
-    }
-  }
-
-  // ===================== API CHECK (no browser needed) =====================
-
-  async tryApiCheck(): Promise<boolean> {
-    if (!this._cookies) return false
-
-    try {
-      const match = this._cookies.match(/SPC_CDS=([^;]+)/)
-      const spcCds = match ? match[1] : ''
-      const url = `${SELLER_CENTRE_URL}/api/v3/order/get_order_list_meta_v2${spcCds ? `?SPC_CDS=${spcCds}&SPC_CDS_VER=2` : ''}`
-
-      const csrfMatch = this._cookies.match(/csrftoken=([^;]+)/)
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Cookie': this._cookies,
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-          'Referer': ORDER_URL,
-          ...(csrfMatch ? { 'X-CSRFToken': csrfMatch[1] } : {}),
-        },
-        body: '{}',
-      })
-
-      if (!res.ok) return false
-
-      const data = await res.json() as { code: number; data?: { OrderListTabMeta?: unknown[] } }
-      if (data.code === 0 && data.data?.OrderListTabMeta?.length) {
-        this.loggedIn = true
-        console.log('API check passed — session still valid (no browser needed)')
-        return true
-      }
-
-      console.log('API check failed — code:', data.code, 'meta:', data.data?.OrderListTabMeta?.length ?? 0)
-
-      return false
-    } catch {
-      return false
     }
   }
 
@@ -233,10 +191,7 @@ export class ShopeeAuthGateway implements AuthGateway {
   // ===================== STATE =====================
 
   isActive(): boolean {
-    // ถ้ามี cookies + loggedIn = true (ไม่ว่าจะมี browser หรือไม่)
     if (this.loggedIn && this._cookies) return true
-
-    // ถ้ามี browser context เปิดอยู่
     if (this.loggedIn && this.context) {
       try {
         if (this.context.pages().length === 0) { this.reset(); return false }
@@ -244,11 +199,6 @@ export class ShopeeAuthGateway implements AuthGateway {
       } catch { this.reset(); return false }
     }
     return false
-  }
-
-  markSessionExpired() {
-    this.loggedIn = false
-    console.log('Session marked as expired')
   }
 
   private reset() {
@@ -261,7 +211,6 @@ export class ShopeeAuthGateway implements AuthGateway {
   async close() {
     if (this.context) {
       await this.context.close().catch(() => {})
-      // keep cookies in memory + file for API-only mode
       this.context = null
       this.page = null
       console.log('Browser closed (cookies preserved)')

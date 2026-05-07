@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build: ./backend
@@ -11,11 +9,13 @@ services:
       - PORT=3001
       - SHOPEE_USERNAME=${SHOPEE_USERNAME}
       - SHOPEE_PASSWORD=${SHOPEE_PASSWORD}
+      - SHOPEE_USERNAME_2=${SHOPEE_USERNAME_2:-}
+      - SHOPEE_PASSWORD_2=${SHOPEE_PASSWORD_2:-}
       - POLLING_INTERVAL=${POLLING_INTERVAL:-300}
+      - DATA_DIR=/app/data
       - HEADLESS=false
     volumes:
-      - browser-profile:/app/data/browser-profile
-      - cache-data:/app/data
+      - shopee-data:/app/data
     restart: unless-stopped
 
   frontend:
@@ -28,5 +28,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  browser-profile:
-  cache-data:
+  shopee-data:

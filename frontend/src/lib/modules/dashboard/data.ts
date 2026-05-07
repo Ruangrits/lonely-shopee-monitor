@@ -18,13 +18,9 @@ export interface Order {
 }
 
 export interface OrderSummary {
-	unpaid: number
 	toShip: number
 	toShipUnprocessed: number
 	toShipProcessed: number
-	shipping: number
-	completed: number
-	cancelled: number
 }
 
 export interface AccountResult {
@@ -33,7 +29,6 @@ export interface AccountResult {
 	platform: Platform
 	summary: OrderSummary
 	toShipOrders: Order[]
-	shippingOrders: Order[]
 	scrapedAt: string
 }
 
@@ -44,9 +39,4 @@ export interface MultiAccountResponse {
 export interface AuthStatus {
 	loggedIn: boolean
 	accounts?: Array<{ loggedIn: boolean }>
-}
-
-export interface PollingStatus {
-	active: boolean
-	interval: number
 }

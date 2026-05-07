@@ -3,7 +3,8 @@ dist/
 build/
 .env
 *.db
-data/
+**/data/*
+!**/data/.gitkeep
 .DS_Store
 .idea/
 .superpowers/

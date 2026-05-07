@@ -15,6 +15,12 @@ export class FetchOrdersUseCase {
   async execute(): Promise<ScrapeResult> {
     try {
       const newResult = await this.gateway.fetchAll()
+
+      // No browser page available — preserve existing cache
+      if (!newResult.accountId) {
+        return this.latestResult
+      }
+
       const now = new Date().toISOString()
 
       if (summaryChanged(this.latestResult, newResult)) {

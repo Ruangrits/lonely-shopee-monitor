@@ -13,10 +13,10 @@
 	)
 </script>
 
-<div class="bg-white border border-grey-100 rounded-xl p-4 shadow-sm">
+<div class="bg-white border border-grey-100 rounded-xl p-3 sm:p-4 shadow-sm">
 	<!-- Header -->
-	<div class="flex justify-between items-center mb-3">
-		<div class="flex items-center gap-2">
+	<div class="flex justify-between items-start gap-2 mb-3">
+		<div class="flex items-center gap-1.5 flex-wrap min-w-0">
 			<PlatformLogo platform={order.platform} size={20} />
 			{#if order.accountName}
 				<span class="text-grey-400 text-2xs font-semibold">{order.accountName}</span>
@@ -26,14 +26,14 @@
 			<span class="text-grey-200 text-xs">•</span>
 			<span class="text-grey-300 text-xs">👤 {order.buyerName || '-'}</span>
 		</div>
-		<span class="text-2xs px-3 py-1 rounded-full font-semibold border {statusStyle}">
+		<span class="text-2xs px-2 sm:px-3 py-1 rounded-full font-semibold border shrink-0 {statusStyle}">
 			{order.status}
 		</span>
 	</div>
 
 	<!-- Items -->
 	{#each order.items as item}
-		<div class="flex items-center gap-3.5 py-3 border-t border-grey-100">
+		<div class="flex items-center gap-3 sm:gap-3.5 py-3 border-t border-grey-100">
 			{#if item.imageUrl}
 				<img
 					src={item.imageUrl}
@@ -55,8 +55,8 @@
 				{/if}
 			</div>
 
-			<div class="text-center shrink-0 px-4">
-				<div class="text-primary-400 text-3xl font-extrabold leading-none">{item.quantity}</div>
+			<div class="text-center shrink-0 px-2 sm:px-4">
+				<div class="text-primary-400 text-2xl sm:text-3xl font-extrabold leading-none">{item.quantity}</div>
 				<div class="text-grey-300 text-2xs mt-0.5">ชิ้น</div>
 			</div>
 		</div>

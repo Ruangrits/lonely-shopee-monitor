@@ -23,7 +23,7 @@
 <div class="flex bg-white rounded-xl border border-grey-100 overflow-hidden shadow-sm">
 	{#each tabs as tab}
 		<button
-			class="flex-1 text-center py-4 px-5 cursor-pointer border-b-3 transition-all
+			class="flex-1 text-center py-3 px-2 sm:py-4 sm:px-5 cursor-pointer border-b-3 transition-all
 				{activeTab === tab.id
 					? 'bg-primary-50 border-b-primary-400'
 					: 'border-b-transparent hover:bg-grey-50'}"
@@ -32,7 +32,7 @@
 			<div class="text-xs font-medium {activeTab === tab.id ? 'text-primary-400' : 'text-grey-300'}">
 				{tab.label}
 			</div>
-			<div class="text-3xl font-bold mt-1 {activeTab === tab.id ? 'text-primary-500' : 'text-grey-400'}">
+			<div class="text-2xl sm:text-3xl font-bold mt-1 {activeTab === tab.id ? 'text-primary-500' : 'text-grey-400'}">
 				{tab.count}
 			</div>
 		</button>
