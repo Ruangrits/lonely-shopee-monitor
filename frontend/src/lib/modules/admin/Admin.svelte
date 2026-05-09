@@ -65,11 +65,12 @@
 
   function showToast(msg: string) {
     toastMsg = msg
-    if (toastTimer) clearTimeout(toastTimer)
+    if (toastTimer) { clearTimeout(toastTimer); toastTimer = null }
     toastTimer = setTimeout(() => { toastMsg = '' }, 3000)
   }
 
   async function sync() {
+    if (syncing) return
     syncing = true
     try {
       const [ordersResult, statesResult] = await Promise.all([
@@ -83,13 +84,14 @@
         )
       }
       if (statesResult.isRight) localStates = statesResult.getRight()
-      lastSyncedAt = new Date().toISOString()
+      if (ordersResult.isRight || statesResult.isRight) lastSyncedAt = new Date().toISOString()
     } finally {
       syncing = false
     }
   }
 
   async function runCleanup() {
+    if (syncing || cleaning) return
     cleaning = true
     try {
       const result = await adminService.cleanup().promise
@@ -119,8 +121,8 @@
   })
 
   onDestroy(() => {
-    if (syncInterval) clearInterval(syncInterval)
-    if (toastTimer) clearTimeout(toastTimer)
+    if (syncInterval) { clearInterval(syncInterval); syncInterval = null }
+    if (toastTimer) { clearTimeout(toastTimer); toastTimer = null }
   })
 </script>
 
@@ -177,7 +179,7 @@
         <button
           class="w-full text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary-300 rounded-xl"
           onclick={() => selectedEntry = entry}
-          aria-label="จัดการออเดอร์ #{entry.order.orderId}"
+          aria-label="จัดการออเดอร์ {entry.order.orderId}"
         >
           <OrderCard order={entry.order} />
         </button>
