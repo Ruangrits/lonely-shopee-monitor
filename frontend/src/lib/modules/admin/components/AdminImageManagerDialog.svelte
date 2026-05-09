@@ -55,6 +55,7 @@
       onSave([...keepUrls, ...newUrls])
     } catch {
       errorMsg = 'อัพโหลดไม่สำเร็จ กรุณาลองใหม่'
+    } finally {
       saving = false
     }
   }
@@ -93,7 +94,7 @@
             <div class="relative">
               <button
                 class="w-full aspect-square rounded-lg overflow-hidden border border-grey-100 block bg-grey-50"
-                onclick={() => window.open(`${API_BASE}/api/images/${url}`, '_blank')}
+                onclick={() => window.open(`${API_BASE}/api/images/${url}`, '_blank', 'noopener,noreferrer')}
                 aria-label="ดูรูปภาพ {i + 1}"
               >
                 <img
@@ -144,7 +145,17 @@
       </div>
 
       <!-- Desktop: drag-and-drop area -->
-      <label class="hidden sm:flex flex-col items-center justify-center border-2 border-dashed border-grey-200 rounded-xl p-5 cursor-pointer hover:bg-grey-50 transition-colors mb-3">
+      <label
+        class="hidden sm:flex flex-col items-center justify-center border-2 border-dashed border-grey-200 rounded-xl p-5 cursor-pointer hover:bg-grey-50 transition-colors mb-3"
+        ondragover={(e) => e.preventDefault()}
+        ondrop={(e) => {
+          e.preventDefault()
+          const files = Array.from(e.dataTransfer?.files ?? []).filter(f => f.type.startsWith('image/'))
+          if (files.length === 0) return
+          pendingFiles = [...pendingFiles, ...files]
+          pendingPreviews = [...pendingPreviews, ...files.map(f => URL.createObjectURL(f))]
+        }}
+      >
         <input type="file" accept="image/*" multiple class="hidden" onchange={addFiles} aria-label="อัพโหลดรูปภาพ" />
         <span class="text-2xl mb-2">📤</span>
         <span class="text-grey-300 text-sm">คลิก หรือลากไฟล์มาวางที่นี่</span>
