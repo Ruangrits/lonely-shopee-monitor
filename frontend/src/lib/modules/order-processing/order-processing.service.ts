@@ -18,7 +18,7 @@ export const orderProcessingService = {
 
   setOrderState(
     orderId: string,
-    payload: { state: LocalOrderState['state']; reason?: LocalOrderState['reason']; imageUrls: string[] }
+    payload: { state: LocalOrderState['state']; reason?: LocalOrderState['reason']; imageUrls: string[]; note?: string }
   ): Future<unknown, LocalOrderState> {
     return client.post(`/api/order-states/${orderId}`)
       .withBody(JSON.stringify(payload))

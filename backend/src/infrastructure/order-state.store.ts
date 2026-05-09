@@ -6,6 +6,7 @@ export interface LocalOrderState {
   state: 'with_stock' | 'no_stock'
   reason?: 'out_of_stock' | 'different_variant'
   imageUrls: string[]
+  note?: string
   processedAt: string
 }
 

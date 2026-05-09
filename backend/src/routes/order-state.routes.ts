@@ -74,7 +74,7 @@ export function createOrderStateRoutes(store: OrderStateStore) {
 
     try {
       const { orderId } = req.params
-      const { state, reason, imageUrls } = req.body
+      const { state, reason, imageUrls, note } = req.body
 
       const validStates = ['with_stock', 'no_stock']
       if (!state || !validStates.includes(state)) {
@@ -93,11 +93,17 @@ export function createOrderStateRoutes(store: OrderStateStore) {
         return
       }
 
+      if (note !== undefined && typeof note !== 'string') {
+        res.status(400).json({ error: 'note must be a string' })
+        return
+      }
+
       const localState: LocalOrderState = {
         orderId,
         state: state as 'with_stock' | 'no_stock',
         reason: reason as 'out_of_stock' | 'different_variant' | undefined,
         imageUrls: imageUrls ?? [],
+        note: note?.trim() || undefined,
         processedAt: new Date().toISOString(),
       }
 

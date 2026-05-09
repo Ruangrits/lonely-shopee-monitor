@@ -2,16 +2,20 @@
   import { onMount, onDestroy } from 'svelte'
   import { shopeeOrderService } from '$lib/core/services/shopee-order-service'
   import { orderProcessingService } from './order-processing.service'
-  import type { ProcessingOrder, LocalOrderState, ProcessedOrderEntry } from './data'
+  import type { Order } from '$lib/modules/dashboard/data'
+  import type { LocalOrderState } from './data'
+  import OrderCard from '$lib/modules/dashboard/components/OrderCard.svelte'
   import ProcessingTabFilter from './components/ProcessingTabFilter.svelte'
-  import PendingOrderCard from './components/PendingOrderCard.svelte'
-  import ProcessedOrderCard from './components/ProcessedOrderCard.svelte'
   import ProcessOrderDialog from './components/ProcessOrderDialog.svelte'
+  import ViewProcessedOrderDialog from './components/ViewProcessedOrderDialog.svelte'
 
-  let shopeeOrders = $state<ProcessingOrder[]>([])
+  interface ProcessedEntry { order: Order; localState: LocalOrderState }
+
+  let shopeeOrders = $state<Order[]>([])
   let localStates = $state<LocalOrderState[]>([])
   let activeTab = $state<'pending' | 'with_stock' | 'no_stock'>('pending')
-  let selectedOrder = $state<ProcessingOrder | null>(null)
+  let selectedPending = $state<Order | null>(null)
+  let selectedProcessed = $state<ProcessedEntry | null>(null)
   let syncing = $state(false)
   let lastSyncedAt = $state('')
   let syncInterval: ReturnType<typeof setInterval> | null = null
@@ -23,22 +27,24 @@
   )
 
   const withStockOrders = $derived(
-    shopeeOrders
-      .filter(o => stateMap.get(o.orderId)?.state === 'with_stock')
-      .map(o => ({ ...o, localState: stateMap.get(o.orderId)! }) as ProcessedOrderEntry)
+    shopeeOrders.flatMap(o => {
+      const ls = stateMap.get(o.orderId)
+      return ls?.state === 'with_stock' ? [{ order: { ...o, status: 'มีของ' }, localState: ls }] : []
+    })
   )
 
   const noStockOrders = $derived(
-    shopeeOrders
-      .filter(o => stateMap.get(o.orderId)?.state === 'no_stock')
-      .map(o => ({ ...o, localState: stateMap.get(o.orderId)! }) as ProcessedOrderEntry)
+    shopeeOrders.flatMap(o => {
+      const ls = stateMap.get(o.orderId)
+      return ls?.state === 'no_stock' ? [{ order: { ...o, status: 'ไม่มีของ' }, localState: ls }] : []
+    })
   )
 
   async function sync() {
     syncing = true
     try {
       const [ordersResult, statesResult] = await Promise.all([
-        shopeeOrderService.getSummary().promise,
+        shopeeOrderService.refreshOrders().promise,
         orderProcessingService.getOrderStates().promise,
       ])
 
@@ -48,7 +54,7 @@
           acc.toShipOrders.map(o => ({
             ...o,
             accountName: acc.accountName,
-            platform: acc.platform as string,
+            platform: acc.platform,
           }))
         )
       }
@@ -65,7 +71,7 @@
 
   function handleProcessed(state: LocalOrderState) {
     localStates = [...localStates.filter(s => s.orderId !== state.orderId), state]
-    selectedOrder = null
+    selectedPending = null
   }
 
   function formatTime(iso: string): string {
@@ -125,7 +131,13 @@
           </div>
         {:else}
           {#each pendingOrders as order (order.orderId)}
-            <PendingOrderCard {order} onClick={() => selectedOrder = order} />
+            <button
+              class="w-full text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary-300 rounded-xl"
+              onclick={() => selectedPending = order}
+              aria-label="กดเพื่อดำเนินการออเดอร์ #{order.orderId}"
+            >
+              <OrderCard {order} />
+            </button>
           {/each}
         {/if}
 
@@ -136,8 +148,14 @@
             <div class="text-sm">ยังไม่มีรายการในหมวดนี้</div>
           </div>
         {:else}
-          {#each withStockOrders as order (order.orderId)}
-            <ProcessedOrderCard {order} />
+          {#each withStockOrders as entry (entry.order.orderId)}
+            <button
+              class="w-full text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-success-100 rounded-xl"
+              onclick={() => selectedProcessed = entry}
+              aria-label="ดูรายละเอียดออเดอร์ #{entry.order.orderId}"
+            >
+              <OrderCard order={entry.order} />
+            </button>
           {/each}
         {/if}
 
@@ -148,8 +166,14 @@
             <div class="text-sm">ยังไม่มีรายการในหมวดนี้</div>
           </div>
         {:else}
-          {#each noStockOrders as order (order.orderId)}
-            <ProcessedOrderCard {order} />
+          {#each noStockOrders as entry (entry.order.orderId)}
+            <button
+              class="w-full text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-danger-100 rounded-xl"
+              onclick={() => selectedProcessed = entry}
+              aria-label="ดูรายละเอียดออเดอร์ #{entry.order.orderId}"
+            >
+              <OrderCard order={entry.order} />
+            </button>
           {/each}
         {/if}
       {/if}
@@ -158,10 +182,18 @@
   </div>
 </div>
 
-{#if selectedOrder}
+{#if selectedPending}
   <ProcessOrderDialog
-    order={selectedOrder}
-    onClose={() => selectedOrder = null}
+    order={selectedPending}
+    onClose={() => selectedPending = null}
     onProcessed={handleProcessed}
+  />
+{/if}
+
+{#if selectedProcessed}
+  <ViewProcessedOrderDialog
+    order={selectedProcessed.order}
+    localState={selectedProcessed.localState}
+    onClose={() => selectedProcessed = null}
   />
 {/if}

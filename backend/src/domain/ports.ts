@@ -18,11 +18,6 @@ export interface OrderGateway {
   fetchAll(): Promise<ScrapeResult>
 }
 
-export interface CachePort<T> {
-  load(): T | null
-  save(data: T, scrapedAt: string): void
-  getScrapedAt(): string
-}
 
 export interface Scheduler {
   start(callback: () => void | Promise<void>, intervalMs: number): void

@@ -1,9 +1,10 @@
 <script lang="ts">
-  import type { ProcessingOrder, LocalOrderState, NoStockReason } from '../data'
+  import type { Order } from '$lib/modules/dashboard/data'
+  import type { LocalOrderState, NoStockReason } from '../data'
   import { orderProcessingService } from '../order-processing.service'
 
   let { order, onClose, onProcessed }: {
-    order: ProcessingOrder
+    order: Order
     onClose: () => void
     onProcessed: (state: LocalOrderState) => void
   } = $props()
@@ -13,6 +14,7 @@
   let noStockReason = $state<NoStockReason | ''>('')
   let selectedFiles = $state<File[]>([])
   let previews = $state<string[]>([])
+  let note = $state('')
   let submitting = $state(false)
   let errorMsg = $state('')
 
@@ -62,6 +64,7 @@
         state: (step === 'with_stock' ? 'with_stock' : 'no_stock') as LocalOrderState['state'],
         reason: step === 'no_stock' ? (noStockReason as NoStockReason) : undefined,
         imageUrls,
+        note: note.trim() || undefined,
       }
 
       const result = await orderProcessingService.setOrderState(order.orderId, payload).promise
@@ -137,7 +140,7 @@
 
       {:else if step === 'with_stock'}
         <div class="flex items-center gap-2 mb-4">
-          <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { step = 'choose'; selectedFiles = []; previews = [] }} aria-label="กลับ">← กลับ</button>
+          <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { step = 'choose'; selectedFiles = []; previews = []; note = '' }} aria-label="กลับ">← กลับ</button>
           <span class="text-success-200 font-semibold text-sm">มีของ — แนบรูปสินค้า</span>
         </div>
         <label for="upload-with-stock" class="block border-2 border-dashed border-primary-200 rounded-xl p-4 text-center cursor-pointer hover:bg-primary-50 transition-colors">
@@ -148,7 +151,7 @@
 
       {:else if step === 'no_stock'}
         <div class="flex items-center gap-2 mb-4">
-          <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { step = 'choose'; noStockReason = ''; selectedFiles = []; previews = [] }} aria-label="กลับ">← กลับ</button>
+          <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { step = 'choose'; noStockReason = ''; selectedFiles = []; previews = []; note = '' }} aria-label="กลับ">← กลับ</button>
           <span class="text-danger-200 font-semibold text-sm">ไม่มีของ — ระบุสาเหตุ</span>
         </div>
         <select
@@ -188,6 +191,20 @@
               <span class="text-grey-300 text-2xl">+</span>
             </label>
           {/if}
+        </div>
+      {/if}
+
+      <!-- Note -->
+      {#if step !== 'choose'}
+        <div class="mt-4">
+          <label for="order-note" class="block text-grey-300 text-xs mb-1.5">โน้ต (ไม่บังคับ)</label>
+          <textarea
+            id="order-note"
+            class="w-full border border-grey-200 rounded-lg px-3 py-2 text-sm text-grey-400 resize-none focus:outline-none focus:border-primary-300"
+            rows={2}
+            placeholder="เพิ่มข้อความสำหรับออเดอร์นี้..."
+            bind:value={note}
+          ></textarea>
         </div>
       {/if}
 

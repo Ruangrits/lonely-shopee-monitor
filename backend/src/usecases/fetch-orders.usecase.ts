@@ -1,44 +1,30 @@
-import type { OrderGateway, CachePort } from '../domain/ports.js'
+import type { OrderGateway } from '../domain/ports.js'
 import type { ScrapeResult } from '../domain/entities.js'
-import { EMPTY_RESULT, summaryChanged } from '../domain/entities.js'
+import { EMPTY_RESULT } from '../domain/entities.js'
 
 export class FetchOrdersUseCase {
-  private latestResult: ScrapeResult
+  private latestResult: ScrapeResult = EMPTY_RESULT
+  private scrapedAt: string = ''
 
-  constructor(
-    private gateway: OrderGateway,
-    private cache: CachePort<ScrapeResult>,
-  ) {
-    this.latestResult = cache.load() || EMPTY_RESULT
-  }
+  constructor(private gateway: OrderGateway) {}
 
-  async execute(): Promise<ScrapeResult> {
+  async execute(): Promise<ScrapeResult & { scrapedAt: string }> {
     try {
-      const newResult = await this.gateway.fetchAll()
+      const result = await this.gateway.fetchAll()
 
-      // No browser page available — preserve existing cache
-      if (!newResult.accountId) {
-        return this.latestResult
+      if (result.accountId) {
+        this.latestResult = result
+        this.scrapedAt = new Date().toISOString()
       }
 
-      const now = new Date().toISOString()
-
-      if (summaryChanged(this.latestResult, newResult)) {
-        console.log('Data changed — updating cache')
-        this.latestResult = newResult
-        this.cache.save(newResult, now)
-      } else {
-        console.log('Data unchanged — keeping cache')
-      }
-
-      return this.latestResult
+      return { ...this.latestResult, scrapedAt: this.scrapedAt }
     } catch (err) {
       console.error('Fetch error:', err)
-      return this.latestResult
+      return { ...this.latestResult, scrapedAt: this.scrapedAt }
     }
   }
 
-  getCached(): ScrapeResult & { scrapedAt: string } {
-    return { ...this.latestResult, scrapedAt: this.cache.getScrapedAt() }
+  getLatest(): ScrapeResult & { scrapedAt: string } {
+    return { ...this.latestResult, scrapedAt: this.scrapedAt }
   }
 }

@@ -8,19 +8,6 @@ export interface LocalOrderState {
   state: LocalOrderStateValue
   reason?: NoStockReason
   imageUrls: string[]
+  note?: string
   processedAt: string
-}
-
-export interface ProcessingOrder {
-  orderId: string
-  buyerName: string
-  orderTime: string
-  items: Array<{ productName: string; variant: string; quantity: number; imageUrl: string }>
-  status: string
-  accountName?: string
-  platform?: string
-}
-
-export interface ProcessedOrderEntry extends ProcessingOrder {
-  localState: LocalOrderState
 }
