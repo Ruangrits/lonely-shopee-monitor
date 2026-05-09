@@ -20,9 +20,11 @@
   ])
 </script>
 
-<div class="flex bg-white rounded-xl border border-grey-100 overflow-hidden shadow-sm">
+<div class="flex bg-white rounded-xl border border-grey-100 overflow-hidden shadow-sm" role="tablist">
   {#each tabs as tab}
     <button
+      role="tab"
+      aria-selected={activeTab === tab.id}
       class="flex-1 text-center py-3 px-2 sm:py-4 sm:px-3 cursor-pointer border-b-3 transition-all
         {activeTab === tab.id
           ? 'bg-primary-50 border-b-primary-400'

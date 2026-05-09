@@ -36,28 +36,31 @@
 
   async function sync() {
     syncing = true
-    const [ordersResult, statesResult] = await Promise.all([
-      shopeeOrderService.getSummary().promise,
-      orderProcessingService.getOrderStates().promise,
-    ])
+    try {
+      const [ordersResult, statesResult] = await Promise.all([
+        shopeeOrderService.getSummary().promise,
+        orderProcessingService.getOrderStates().promise,
+      ])
 
-    if (ordersResult.isRight) {
-      const data = ordersResult.getRight()
-      shopeeOrders = (data.accounts ?? []).flatMap(acc =>
-        acc.toShipOrders.map(o => ({
-          ...o,
-          accountName: acc.accountName,
-          platform: acc.platform as string,
-        }))
-      )
+      if (ordersResult.isRight) {
+        const data = ordersResult.getRight()
+        shopeeOrders = (data.accounts ?? []).flatMap(acc =>
+          acc.toShipOrders.map(o => ({
+            ...o,
+            accountName: acc.accountName,
+            platform: acc.platform as string,
+          }))
+        )
+      }
+
+      if (statesResult.isRight) {
+        localStates = statesResult.getRight()
+      }
+
+      lastSyncedAt = new Date().toISOString()
+    } finally {
+      syncing = false
     }
-
-    if (statesResult.isRight) {
-      localStates = statesResult.getRight()
-    }
-
-    lastSyncedAt = new Date().toISOString()
-    syncing = false
   }
 
   function handleProcessed(state: LocalOrderState) {
@@ -96,6 +99,8 @@
         class="bg-primary-400 hover:bg-primary-500 text-white px-3 sm:px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 shrink-0"
         onclick={sync}
         disabled={syncing}
+        aria-label={syncing ? 'กำลังซิงก์...' : 'ซิงก์ข้อมูล'}
+        aria-busy={syncing}
       >
         {syncing ? '...' : 'Sync'}
       </button>
