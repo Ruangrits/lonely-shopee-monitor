@@ -31,10 +31,10 @@
         onUpdated()
       } else {
         errorMsg = 'ดำเนินการไม่สำเร็จ'
-        submitting = false
       }
     } catch {
       errorMsg = 'เกิดข้อผิดพลาด'
+    } finally {
       submitting = false
     }
   }
@@ -56,10 +56,10 @@
         onUpdated()
       } else {
         errorMsg = 'ดำเนินการไม่สำเร็จ'
-        submitting = false
       }
     } catch {
       errorMsg = 'เกิดข้อผิดพลาด'
+    } finally {
       submitting = false
     }
   }
@@ -79,27 +79,29 @@
         onUpdated()
       } else {
         errorMsg = 'ดำเนินการไม่สำเร็จ'
-        submitting = false
       }
     } catch {
       errorMsg = 'เกิดข้อผิดพลาด'
+    } finally {
       submitting = false
     }
   }
 
   async function handleImageSave(urls: string[]) {
+    if (!localState) return
     try {
       const payload = {
-        state: localState!.state,
-        reason: localState!.reason,
+        state: localState.state,
+        reason: localState.reason,
         imageUrls: urls,
-        note: localState?.note,
+        note: localState.note,
       }
       await adminService.updateOrderState(order.orderId, payload).promise
       showImageManager = false
       onUpdated()
     } catch {
-      // AdminImageManagerDialog shows its own error; just close on success path
+      errorMsg = 'บันทึกรูปภาพไม่สำเร็จ'
+      showImageManager = false
     }
   }
 </script>
@@ -165,6 +167,7 @@
               class="text-left px-4 py-3 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl text-sm font-semibold hover:bg-purple-100 transition-colors"
               onclick={() => {
                 mode = 'change_status'
+                errorMsg = ''
                 newState = orderState === 'with_stock' ? 'no_stock' : 'with_stock'
                 newNote = localState?.note ?? ''
               }}
@@ -191,7 +194,7 @@
       {:else}
         <!-- Inline change-status section -->
         <div class="flex items-center gap-2 mb-4">
-          <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => mode = 'main'} aria-label="กลับ">← กลับ</button>
+          <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { mode = 'main'; errorMsg = '' }} aria-label="กลับ">← กลับ</button>
           <span class="text-grey-400 font-semibold text-sm">เปลี่ยน status</span>
         </div>
 
@@ -220,8 +223,9 @@
         {/if}
 
         <div class="mb-4">
-          <label class="block text-grey-300 text-xs mb-1.5">โน้ต (ไม่บังคับ)</label>
+          <label for="change-status-note" class="block text-grey-300 text-xs mb-1.5">โน้ต (ไม่บังคับ)</label>
           <textarea
+            id="change-status-note"
             class="w-full border border-grey-200 rounded-lg px-3 py-2 text-sm text-grey-400 resize-none focus:outline-none focus:border-primary-300"
             rows={2}
             placeholder="เพิ่มข้อความสำหรับออเดอร์นี้..."
