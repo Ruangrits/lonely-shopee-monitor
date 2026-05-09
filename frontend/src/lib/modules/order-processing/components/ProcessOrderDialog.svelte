@@ -16,6 +16,12 @@
   let submitting = $state(false)
   let errorMsg = $state('')
 
+  $effect(() => {
+    return () => {
+      for (const url of previews) URL.revokeObjectURL(url)
+    }
+  })
+
   const uploadRequired = $derived(
     step === 'with_stock' || (step === 'no_stock' && noStockReason === 'different_variant')
   )
@@ -89,7 +95,7 @@
     <!-- Header -->
     <div class="flex justify-between items-center px-4 py-3 border-b border-grey-100">
       <h2 class="text-grey-400 font-bold text-base">รายละเอียดคำสั่งซื้อ</h2>
-      <button class="text-grey-300 hover:text-grey-400 p-1 text-lg" onclick={onClose}>✕</button>
+      <button class="text-grey-300 hover:text-grey-400 p-1 text-lg" onclick={onClose} aria-label="ปิด">✕</button>
     </div>
 
     <!-- Order info -->
@@ -131,18 +137,18 @@
 
       {:else if step === 'with_stock'}
         <div class="flex items-center gap-2 mb-4">
-          <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { step = 'choose'; selectedFiles = []; previews = [] }}>← กลับ</button>
+          <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { step = 'choose'; selectedFiles = []; previews = [] }} aria-label="กลับ">← กลับ</button>
           <span class="text-success-200 font-semibold text-sm">มีของ — แนบรูปสินค้า</span>
         </div>
-        <label class="block border-2 border-dashed border-primary-200 rounded-xl p-4 text-center cursor-pointer hover:bg-primary-50 transition-colors">
-          <input type="file" accept="image/*" multiple class="hidden" onchange={addFiles} />
+        <label for="upload-with-stock" class="block border-2 border-dashed border-primary-200 rounded-xl p-4 text-center cursor-pointer hover:bg-primary-50 transition-colors">
+          <input id="upload-with-stock" type="file" accept="image/*" multiple class="hidden" onchange={addFiles} aria-label="อัพโหลดรูปสินค้า" />
           <div class="text-grey-300 text-sm">กดเพื่อเลือกรูป (ได้หลายใบ)</div>
           <div class="text-primary-400 text-xs mt-1">* จำเป็นต้องแนบอย่างน้อย 1 รูป</div>
         </label>
 
       {:else if step === 'no_stock'}
         <div class="flex items-center gap-2 mb-4">
-          <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { step = 'choose'; noStockReason = ''; selectedFiles = []; previews = [] }}>← กลับ</button>
+          <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { step = 'choose'; noStockReason = ''; selectedFiles = []; previews = [] }} aria-label="กลับ">← กลับ</button>
           <span class="text-danger-200 font-semibold text-sm">ไม่มีของ — ระบุสาเหตุ</span>
         </div>
         <select
@@ -154,9 +160,9 @@
           <option value="different_variant">มีสินค้า (สี/ไซซ์/ขนาด) อื่น แต่แบบเดียวกัน</option>
         </select>
 
-        <label class="block border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors
+        <label for="upload-no-stock" class="block border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors
           {noStockReason === 'different_variant' ? 'border-danger-200 hover:bg-danger-50' : 'border-grey-200 hover:bg-grey-50'}">
-          <input type="file" accept="image/*" multiple class="hidden" onchange={addFiles} />
+          <input id="upload-no-stock" type="file" accept="image/*" multiple class="hidden" onchange={addFiles} aria-label="อัพโหลดรูปประกอบ" />
           <div class="text-grey-300 text-sm">กดเพื่อแนบรูป</div>
           <div class="text-xs mt-1 {noStockReason === 'different_variant' ? 'text-danger-200' : 'text-grey-200'}">
             {noStockReason === 'different_variant' ? '* จำเป็นต้องแนบรูป' : 'ไม่บังคับ'}
@@ -169,7 +175,7 @@
         <div class="mt-3 grid grid-cols-3 gap-2">
           {#each previews as preview, i}
             <div class="relative">
-              <img src={preview} alt="" class="w-full aspect-square object-cover rounded-lg border border-grey-100" />
+              <img src={preview} alt="รูปสินค้าที่อัพโหลด {i + 1}" class="w-full aspect-square object-cover rounded-lg border border-grey-100" />
               <button
                 class="absolute top-1 right-1 bg-black/50 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center leading-none"
                 onclick={() => removeFile(i)}
@@ -177,8 +183,8 @@
             </div>
           {/each}
           {#if step !== 'choose'}
-            <label class="aspect-square border-2 border-dashed border-grey-200 rounded-lg flex items-center justify-center cursor-pointer hover:bg-grey-50">
-              <input type="file" accept="image/*" multiple class="hidden" onchange={addFiles} />
+            <label class="aspect-square border-2 border-dashed border-grey-200 rounded-lg flex items-center justify-center cursor-pointer hover:bg-grey-50" aria-label="เพิ่มรูป">
+              <input type="file" accept="image/*" multiple class="hidden" onchange={addFiles} aria-label="เพิ่มรูป" />
               <span class="text-grey-300 text-2xl">+</span>
             </label>
           {/if}
