@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import type { OrderStateStore, LocalOrderState } from '../infrastructure/order-state.store.js'
 
-const IMAGE_BASE = '/Volumes/public/lonely-monitor/image-verify'
+const IMAGE_BASE = process.env.IMAGE_DIR || '/Volumes/public/lonely-monitor/image-verify'
 
 function getUploadDir(orderId: string): string {
   if (!orderId || !/^[a-zA-Z0-9_-]+$/.test(orderId)) {
@@ -66,6 +66,12 @@ export function createOrderStateRoutes(store: OrderStateStore) {
   })
 
   router.post('/:orderId', (req, res) => {
+    const SAFE_ID = /^[a-zA-Z0-9_-]+$/
+    if (!SAFE_ID.test(req.params.orderId)) {
+      res.status(400).json({ error: 'Invalid orderId' })
+      return
+    }
+
     try {
       const { orderId } = req.params
       const { state, reason, imageUrls } = req.body

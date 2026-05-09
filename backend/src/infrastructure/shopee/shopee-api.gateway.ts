@@ -159,10 +159,8 @@ export class ShopeeApiGateway implements OrderGateway {
       for (const group of itemInfoLists) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         for (const item of (group.item_list || []) as any[]) {
-          console.log('DEBUG item:', JSON.stringify(item, null, 2))
-          
           let variant = ''
-          
+
           // Try multiple possible fields for variant
           if (item.model_name) {
             variant = item.model_name
@@ -170,11 +168,8 @@ export class ShopeeApiGateway implements OrderGateway {
             variant = item.variant_name
           } else if (item.description) {
             const variantMatch = item.description.match(/ตัวเลือกสินค้า:\s*(.+)/)
-            console.log('DEBUG variantMatch:', variantMatch)
             variant = variantMatch ? variantMatch[1].trim() : ''
           }
-          
-          console.log('DEBUG final variant:', variant)
           
           items.push({
             productName: item.name || '',
