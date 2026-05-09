@@ -34,6 +34,7 @@ export const orderProcessingService = {
       method: 'POST',
       body: formData,
     })
+    if (!res.ok) throw new Error(`Upload failed: ${res.status} ${res.statusText}`)
     return res.json() as Promise<{ imageUrls: string[] }>
   },
 }
