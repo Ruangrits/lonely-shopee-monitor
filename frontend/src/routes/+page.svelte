@@ -1,5 +1,5 @@
 <script lang="ts">
-	import App from '$lib/app/App.svelte'
+  import OrderProcessing from '$lib/modules/order-processing/OrderProcessing.svelte'
 </script>
 
-<App />
+<OrderProcessing />
