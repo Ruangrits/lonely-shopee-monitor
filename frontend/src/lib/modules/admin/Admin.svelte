@@ -11,6 +11,10 @@
 
   interface OrderEntry { order: Order; localState: LocalOrderState | null }
 
+  let loggedIn = $state(false)
+  let loading = $state(true)
+  let initError = $state('')
+
   let shopeeOrders = $state<Order[]>([])
   let localStates = $state<LocalOrderState[]>([])
   let activeTab = $state<'pending' | 'with_stock' | 'no_stock' | 'admin_completed'>('pending')
@@ -128,9 +132,27 @@
     } catch { return '' }
   }
 
-  onMount(() => {
-    sync()
-    syncInterval = setInterval(sync, 5 * 60 * 1000)
+  async function init() {
+    loading = true
+    initError = ''
+    const either = await shopeeOrderService.getAuthStatus().promise
+    if (either.isRight) {
+      loggedIn = either.getRight().loggedIn
+      if (!loggedIn) {
+        initError = 'ยังไม่ได้ login Shopee — กรุณาตรวจสอบ SHOPEE_USERNAME/PASSWORD ใน .env แล้ว restart backend'
+      }
+    } else {
+      initError = 'ไม่สามารถเชื่อมต่อ backend ได้ — กรุณาตรวจสอบว่า backend กำลังทำงานอยู่'
+    }
+    loading = false
+  }
+
+  onMount(async () => {
+    await init()
+    if (loggedIn) {
+      sync()
+      syncInterval = setInterval(sync, 5 * 60 * 1000)
+    }
   })
 
   onDestroy(() => {
@@ -138,6 +160,27 @@
     if (toastTimer) { clearTimeout(toastTimer); toastTimer = null }
   })
 </script>
+
+{#if loading}
+  <div class="flex items-center justify-center min-h-screen">
+    <div class="flex flex-col items-center gap-3">
+      <div class="w-8 h-8 border-3 border-primary-300 border-t-transparent rounded-full animate-spin"></div>
+      <div class="text-sm text-grey-300">กำลังเชื่อมต่อ Shopee...</div>
+    </div>
+  </div>
+{:else if !loggedIn}
+  <div class="flex items-center justify-center min-h-screen">
+    <div class="max-w-md p-6 bg-white rounded-xl shadow-lg text-center">
+      <div class="flex flex-col gap-4">
+        <div class="text-lg font-bold text-grey-400">Admin จัดการออเดอร์</div>
+        <div class="p-3 bg-danger-50 text-danger-200 rounded-lg text-sm">{initError}</div>
+        <div class="text-xs text-grey-200">
+          ตั้งค่า SHOPEE_USERNAME และ SHOPEE_PASSWORD ในไฟล์ backend/.env แล้ว restart backend
+        </div>
+      </div>
+    </div>
+  </div>
+{:else}
 
 <div class="min-h-screen bg-grey-50">
 
@@ -219,4 +262,6 @@
     onClose={() => selectedEntry = null}
     onUpdated={() => { selectedEntry = null; sync() }}
   />
+{/if}
+
 {/if}
