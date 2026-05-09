@@ -22,13 +22,22 @@ export class OrderStateStore {
         const data = JSON.parse(fs.readFileSync(this.filePath, 'utf-8')) as LocalOrderState[]
         for (const s of data) this.states.set(s.orderId, s)
       }
-    } catch { /* start empty */ }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      console.warn(`Failed to load order states from ${this.filePath}: ${errorMsg}. Starting with empty state.`)
+    }
   }
 
   private persist(): void {
-    const dir = path.dirname(this.filePath)
-    fs.mkdirSync(dir, { recursive: true })
-    fs.writeFileSync(this.filePath, JSON.stringify([...this.states.values()], null, 2))
+    try {
+      const dir = path.dirname(this.filePath)
+      fs.mkdirSync(dir, { recursive: true })
+      fs.writeFileSync(this.filePath, JSON.stringify([...this.states.values()], null, 2))
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      console.error(`Failed to persist order states to ${this.filePath}: ${errorMsg}`)
+      throw new Error(`Failed to persist order state: ${errorMsg}`)
+    }
   }
 
   getAll(): LocalOrderState[] {
@@ -36,6 +45,12 @@ export class OrderStateStore {
   }
 
   set(state: LocalOrderState): void {
+    if (!state.orderId || !state.orderId.trim()) {
+      throw new Error('orderId is required and cannot be empty')
+    }
+    if (!state.processedAt) {
+      throw new Error('processedAt is required')
+    }
     this.states.set(state.orderId, state)
     this.persist()
   }
