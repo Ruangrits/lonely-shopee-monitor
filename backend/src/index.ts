@@ -16,7 +16,7 @@ import { createAuthRoutes } from './routes/auth.routes.js'
 import { createOrderRoutes } from './routes/order.routes.js'
 import { createSettingsRoutes } from './routes/settings.routes.js'
 import { OrderStateStore } from './infrastructure/order-state.store.js'
-import { createOrderStateRoutes, createUploadRoutes } from './routes/order-state.routes.js'
+import { createOrderStateRoutes, createUploadRoutes, IMAGE_BASE } from './routes/order-state.routes.js'
 
 dotenv.config()
 
@@ -24,6 +24,12 @@ dotenv.config()
 const dataDir = path.resolve(process.env.DATA_DIR || './data')
 
 const orderStateStore = new OrderStateStore(path.join(dataDir, 'order-states.json'))
+
+// Auto-cleanup admin_completed entries older than 30 days on startup
+const autoCleanedCount = orderStateStore.cleanup(30)
+if (autoCleanedCount > 0) {
+  console.log(`Auto-cleanup: removed ${autoCleanedCount} admin_completed entries older than 30 days`)
+}
 
 // --- Accounts config ---
 const accounts = [
@@ -73,6 +79,8 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
   .concat(['http://localhost:6889'])
 app.use(cors({ origin: allowedOrigins }))
 app.use(express.json())
+
+app.use('/api/images', express.static(IMAGE_BASE))
 
 app.use('/api/auth', createAuthRoutes(checkAuthList, managePolling))
 app.use('/api/orders', createOrderRoutes(fetchOrdersList))
