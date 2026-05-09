@@ -18,6 +18,7 @@
   let syncing = $state(false)
   let cleaning = $state(false)
   let lastSyncedAt = $state('')
+  let syncError = $state('')
   let toastMsg = $state('')
   let toastTimer: ReturnType<typeof setTimeout> | null = null
   let syncInterval: ReturnType<typeof setInterval> | null = null
@@ -72,19 +73,31 @@
   async function sync() {
     if (syncing) return
     syncing = true
+    syncError = ''
     try {
-      const [ordersResult, statesResult] = await Promise.all([
-        shopeeOrderService.refreshOrders().promise,
-        orderProcessingService.getOrderStates().promise,
-      ])
+      console.log('[Admin] sync: calling refreshOrders() → POST /api/orders/refresh')
+      // Refresh orders from Shopee (Playwright — may take 10–30s)
+      const refreshPromise = shopeeOrderService.refreshOrders().promise
+      // Load local order states in parallel (fast)
+      const statesPromise = orderProcessingService.getOrderStates().promise
+
+      const [ordersResult, statesResult] = await Promise.all([refreshPromise, statesPromise])
+
       if (ordersResult.isRight) {
         const data = ordersResult.getRight()
         shopeeOrders = (data.accounts ?? []).flatMap(acc =>
           acc.toShipOrders.map(o => ({ ...o, accountName: acc.accountName, platform: acc.platform }))
         )
+        console.log('[Admin] refreshOrders OK — orders:', shopeeOrders.length)
+      } else {
+        console.warn('[Admin] refreshOrders failed (Left)', ordersResult)
+        syncError = 'ดึงออเดอร์จาก Shopee ไม่สำเร็จ'
       }
       if (statesResult.isRight) localStates = statesResult.getRight()
       if (ordersResult.isRight || statesResult.isRight) lastSyncedAt = new Date().toISOString()
+    } catch (e) {
+      console.error('[Admin] sync threw:', e)
+      syncError = 'เชื่อมต่อ backend ไม่ได้'
     } finally {
       syncing = false
     }
@@ -132,7 +145,9 @@
   <div class="bg-white border-b border-grey-100 px-4 py-3 flex justify-between items-center gap-2 sticky top-0 z-10">
     <div>
       <h1 class="text-base font-bold text-grey-400">Admin จัดการออเดอร์</h1>
-      {#if lastSyncedAt}
+      {#if syncError}
+        <div class="text-xs text-danger-200 mt-0.5">{syncError}</div>
+      {:else if lastSyncedAt}
         <div class="text-xs text-grey-200 mt-0.5">อัปเดต: {formatTime(lastSyncedAt)}</div>
       {/if}
     </div>
