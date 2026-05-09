@@ -2,10 +2,10 @@ import { Blizzard } from 'th-lonely-universe-web-lib/blizzard'
 import { Either } from 'th-lonely-universe-web-lib/fp'
 import type { Future } from 'th-lonely-universe-web-lib/async'
 import type { AuthStatus, MultiAccountResponse } from '$lib/modules/dashboard/data'
-
-const API_BASE = typeof window !== 'undefined'
+//
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined'
 	? `${window.location.protocol}//${window.location.hostname}:3001`
-	: 'http://localhost:3001'
+	: 'http://localhost:3001')
 const client = Blizzard(API_BASE, { 'Content-Type': 'application/json' })
 
 export const shopeeOrderService = {

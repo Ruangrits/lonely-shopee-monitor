@@ -159,10 +159,26 @@ export class ShopeeApiGateway implements OrderGateway {
       for (const group of itemInfoLists) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         for (const item of (group.item_list || []) as any[]) {
-          const variantMatch = item.description?.match(/ตัวเลือกสินค้า:\s*(.+?)(?:\s*$)/)
+          console.log('DEBUG item:', JSON.stringify(item, null, 2))
+          
+          let variant = ''
+          
+          // Try multiple possible fields for variant
+          if (item.model_name) {
+            variant = item.model_name
+          } else if (item.variant_name) {
+            variant = item.variant_name
+          } else if (item.description) {
+            const variantMatch = item.description.match(/ตัวเลือกสินค้า:\s*(.+)/)
+            console.log('DEBUG variantMatch:', variantMatch)
+            variant = variantMatch ? variantMatch[1].trim() : ''
+          }
+          
+          console.log('DEBUG final variant:', variant)
+          
           items.push({
             productName: item.name || '',
-            variant: variantMatch ? variantMatch[1].trim() : '',
+            variant: variant,
             quantity: item.amount || 1,
             imageUrl: item.image ? `${SHOPEE_IMAGE_CDN}${item.image}` : '',
           })

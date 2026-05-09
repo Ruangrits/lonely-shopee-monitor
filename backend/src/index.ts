@@ -68,7 +68,7 @@ const managePolling = new ManagePollingUseCase(fetchOrdersList, checkAuthList, s
 const app = express()
 const port = process.env.PORT || 3001
 
-app.use(cors())
+app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173' }))
 app.use(express.json())
 
 app.use('/api/auth', createAuthRoutes(checkAuthList, managePolling))

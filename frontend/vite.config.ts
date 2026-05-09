@@ -11,6 +11,7 @@ export default defineConfig({
 				// lonely-web-lib (local dependency — fonts, icons, theme)
 				path.resolve('../lonely-web-lib'),
 			]
-		}
+		},
+		allowedHosts: ['llmnt.sytes.net']
 	}
 });
