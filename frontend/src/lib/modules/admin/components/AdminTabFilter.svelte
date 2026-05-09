@@ -18,9 +18,11 @@
   ] as const)
 </script>
 
-<div class="flex bg-white border-b-2 border-grey-100 overflow-x-auto">
+<div class="flex bg-white border-b-2 border-grey-100 overflow-x-auto" role="tablist">
   {#each tabs as tab}
     <button
+      role="tab"
+      aria-selected={activeTab === tab.id}
       class="flex-1 min-w-0 flex flex-col items-center py-2.5 px-1 text-center border-b-2 transition-colors
         {activeTab === tab.id
           ? 'border-primary-400 text-primary-400'
