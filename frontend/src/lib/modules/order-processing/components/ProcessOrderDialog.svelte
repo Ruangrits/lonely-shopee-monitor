@@ -143,7 +143,21 @@
           <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { step = 'choose'; selectedFiles = []; previews = []; note = '' }} aria-label="กลับ">← กลับ</button>
           <span class="text-success-200 font-semibold text-sm">มีของ — แนบรูปสินค้า</span>
         </div>
-        <label for="upload-with-stock" class="block border-2 border-dashed border-primary-200 rounded-xl p-4 text-center cursor-pointer hover:bg-primary-50 transition-colors">
+        <!-- Mobile: camera + file picker -->
+        <div class="grid grid-cols-2 gap-3 sm:hidden">
+          <label class="flex flex-col items-center justify-center gap-1.5 border-2 border-primary-200 bg-primary-50 rounded-xl p-4 cursor-pointer hover:bg-primary-100 transition-colors">
+            <input type="file" accept="image/*" capture="environment" class="hidden" onchange={addFiles} aria-label="ถ่ายรูป" />
+            <span class="text-2xl">📸</span>
+            <span class="text-primary-400 text-xs font-semibold">ถ่ายรูป</span>
+          </label>
+          <label class="flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-primary-200 rounded-xl p-4 cursor-pointer hover:bg-primary-50 transition-colors">
+            <input type="file" accept="image/*" multiple class="hidden" onchange={addFiles} aria-label="เลือกไฟล์" />
+            <span class="text-2xl">📁</span>
+            <span class="text-grey-300 text-xs font-semibold">เลือกไฟล์</span>
+          </label>
+        </div>
+        <!-- Desktop: original upload area -->
+        <label for="upload-with-stock" class="hidden sm:block border-2 border-dashed border-primary-200 rounded-xl p-4 text-center cursor-pointer hover:bg-primary-50 transition-colors">
           <input id="upload-with-stock" type="file" accept="image/*" multiple class="hidden" onchange={addFiles} aria-label="อัพโหลดรูปสินค้า" />
           <div class="text-grey-300 text-sm">กดเพื่อเลือกรูป (ได้หลายใบ)</div>
           <div class="text-primary-400 text-xs mt-1">* จำเป็นต้องแนบอย่างน้อย 1 รูป</div>
@@ -163,7 +177,23 @@
           <option value="different_variant">มีสินค้า (สี/ไซซ์/ขนาด) อื่น แต่แบบเดียวกัน</option>
         </select>
 
-        <label for="upload-no-stock" class="block border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors
+        <!-- Mobile: camera + file picker -->
+        <div class="grid grid-cols-2 gap-3 sm:hidden">
+          <label class="flex flex-col items-center justify-center gap-1.5 border-2 rounded-xl p-4 cursor-pointer transition-colors
+            {noStockReason === 'different_variant' ? 'border-danger-200 bg-danger-50 hover:bg-danger-100' : 'border-grey-200 bg-grey-50 hover:bg-grey-100'}">
+            <input type="file" accept="image/*" capture="environment" class="hidden" onchange={addFiles} aria-label="ถ่ายรูป" />
+            <span class="text-2xl">📸</span>
+            <span class="text-xs font-semibold {noStockReason === 'different_variant' ? 'text-danger-200' : 'text-grey-300'}">ถ่ายรูป</span>
+          </label>
+          <label class="flex flex-col items-center justify-center gap-1.5 border-2 border-dashed rounded-xl p-4 cursor-pointer transition-colors
+            {noStockReason === 'different_variant' ? 'border-danger-200 hover:bg-danger-50' : 'border-grey-200 hover:bg-grey-50'}">
+            <input type="file" accept="image/*" multiple class="hidden" onchange={addFiles} aria-label="เลือกไฟล์" />
+            <span class="text-2xl">📁</span>
+            <span class="text-xs font-semibold {noStockReason === 'different_variant' ? 'text-danger-200' : 'text-grey-300'}">เลือกไฟล์</span>
+          </label>
+        </div>
+        <!-- Desktop: original upload area -->
+        <label for="upload-no-stock" class="hidden sm:block border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors
           {noStockReason === 'different_variant' ? 'border-danger-200 hover:bg-danger-50' : 'border-grey-200 hover:bg-grey-50'}">
           <input id="upload-no-stock" type="file" accept="image/*" multiple class="hidden" onchange={addFiles} aria-label="อัพโหลดรูปประกอบ" />
           <div class="text-grey-300 text-sm">กดเพื่อแนบรูป</div>
