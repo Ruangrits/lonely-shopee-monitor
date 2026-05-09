@@ -3,7 +3,7 @@ import path from 'path'
 
 export interface LocalOrderState {
   orderId: string
-  state: 'with_stock' | 'no_stock'
+  state: 'with_stock' | 'no_stock' | 'admin_completed'
   reason?: 'out_of_stock' | 'different_variant'
   imageUrls: string[]
   note?: string
@@ -54,5 +54,27 @@ export class OrderStateStore {
     }
     this.states.set(state.orderId, state)
     this.persist()
+  }
+
+  delete(orderId: string): boolean {
+    const existed = this.states.has(orderId)
+    if (existed) {
+      this.states.delete(orderId)
+      this.persist()
+    }
+    return existed
+  }
+
+  cleanup(olderThanDays: number): number {
+    const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000
+    let deleted = 0
+    for (const [id, state] of this.states) {
+      if (state.state === 'admin_completed' && new Date(state.processedAt).getTime() < cutoff) {
+        this.states.delete(id)
+        deleted++
+      }
+    }
+    if (deleted > 0) this.persist()
+    return deleted
   }
 }
