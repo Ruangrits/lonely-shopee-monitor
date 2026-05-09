@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import type { OrderStateStore, LocalOrderState } from '../infrastructure/order-state.store.js'
 
-const IMAGE_BASE = process.env.IMAGE_DIR || '/Volumes/public/lonely-monitor/image-verify'
+export const IMAGE_BASE = process.env.IMAGE_DIR || '/Volumes/public/lonely-monitor/image-verify'
 
 function getUploadDir(orderId: string): string {
   if (!orderId || !/^[a-zA-Z0-9_-]+$/.test(orderId)) {
@@ -43,7 +43,7 @@ const upload = multer({
       cb(null, `${Date.now()}${ext}`)
     },
   }),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
       cb(null, true)
@@ -52,6 +52,40 @@ const upload = multer({
     }
   },
 })
+
+const VALID_STATES = ['with_stock', 'no_stock', 'admin_completed']
+const VALID_REASONS = ['out_of_stock', 'different_variant']
+const SAFE_ID = /^[a-zA-Z0-9_-]+$/
+
+interface ValidatedBody {
+  error?: string
+  state?: string
+  reason?: string
+  imageUrls?: string[]
+  note?: string
+}
+
+function validateOrderStateBody(body: Record<string, unknown>): ValidatedBody {
+  const { state, reason, imageUrls, note } = body
+  if (!state || !VALID_STATES.includes(state as string)) {
+    return { error: `state must be one of: ${VALID_STATES.join(', ')}` }
+  }
+  if (reason && !VALID_REASONS.includes(reason as string)) {
+    return { error: 'Invalid reason' }
+  }
+  if (imageUrls && (!Array.isArray(imageUrls) || !imageUrls.every((u: unknown) => typeof u === 'string'))) {
+    return { error: 'imageUrls must be an array of strings' }
+  }
+  if (note !== undefined && typeof note !== 'string') {
+    return { error: 'note must be a string' }
+  }
+  return {
+    state: state as string,
+    reason: reason as string | undefined,
+    imageUrls: imageUrls as string[] | undefined,
+    note: note as string | undefined,
+  }
+}
 
 export function createOrderStateRoutes(store: OrderStateStore) {
   const router = Router()
@@ -65,50 +99,87 @@ export function createOrderStateRoutes(store: OrderStateStore) {
     }
   })
 
+  // POST /cleanup must come before POST /:orderId to avoid matching 'cleanup' as orderId
+  router.post('/cleanup', (_req, res) => {
+    try {
+      const deleted = store.cleanup(30)
+      res.json({ deleted })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      res.status(500).json({ error: message })
+    }
+  })
+
   router.post('/:orderId', (req, res) => {
-    const SAFE_ID = /^[a-zA-Z0-9_-]+$/
     if (!SAFE_ID.test(req.params.orderId)) {
       res.status(400).json({ error: 'Invalid orderId' })
       return
     }
-
     try {
       const { orderId } = req.params
-      const { state, reason, imageUrls, note } = req.body
-
-      const validStates = ['with_stock', 'no_stock']
-      if (!state || !validStates.includes(state)) {
-        res.status(400).json({ error: 'state must be "with_stock" or "no_stock"' })
+      const validated = validateOrderStateBody(req.body)
+      if (validated.error) {
+        res.status(400).json({ error: validated.error })
         return
       }
-
-      const validReasons = ['out_of_stock', 'different_variant']
-      if (reason && !validReasons.includes(reason)) {
-        res.status(400).json({ error: 'Invalid reason' })
-        return
-      }
-
-      if (imageUrls && (!Array.isArray(imageUrls) || !imageUrls.every((u: unknown) => typeof u === 'string'))) {
-        res.status(400).json({ error: 'imageUrls must be an array of strings' })
-        return
-      }
-
-      if (note !== undefined && typeof note !== 'string') {
-        res.status(400).json({ error: 'note must be a string' })
-        return
-      }
-
       const localState: LocalOrderState = {
         orderId,
-        state: state as 'with_stock' | 'no_stock',
-        reason: reason as 'out_of_stock' | 'different_variant' | undefined,
-        imageUrls: imageUrls ?? [],
-        note: note?.trim() || undefined,
+        state: validated.state as LocalOrderState['state'],
+        reason: validated.reason as LocalOrderState['reason'],
+        imageUrls: validated.imageUrls ?? [],
+        note: validated.note?.trim() || undefined,
         processedAt: new Date().toISOString(),
       }
-
       store.set(localState)
       res.status(201).json(localState)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      res.status(500).json({ error: message })
+    }
+  })
+
+  router.put('/:orderId', (req, res) => {
+    if (!SAFE_ID.test(req.params.orderId)) {
+      res.status(400).json({ error: 'Invalid orderId' })
+      return
+    }
+    try {
+      const { orderId } = req.params
+      const validated = validateOrderStateBody(req.body)
+      if (validated.error) {
+        res.status(400).json({ error: validated.error })
+        return
+      }
+      const existing = store.getAll().find(s => s.orderId === orderId)
+      const localState: LocalOrderState = {
+        orderId,
+        state: validated.state as LocalOrderState['state'],
+        reason: validated.reason as LocalOrderState['reason'],
+        imageUrls: validated.imageUrls ?? [],
+        note: validated.note?.trim() || undefined,
+        processedAt: existing?.processedAt ?? new Date().toISOString(),
+      }
+      store.set(localState)
+      res.status(200).json(localState)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      res.status(500).json({ error: message })
+    }
+  })
+
+  router.delete('/:orderId', (req, res) => {
+    if (!SAFE_ID.test(req.params.orderId)) {
+      res.status(400).json({ error: 'Invalid orderId' })
+      return
+    }
+    try {
+      const existed = store.delete(req.params.orderId)
+      if (!existed) {
+        res.status(404).json({ error: 'Order state not found' })
+        return
+      }
+      // Return 200 with body (not 204) so JSON clients can parse the response
+      res.status(200).json({ ok: true })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       res.status(500).json({ error: message })
@@ -128,7 +199,8 @@ export function createUploadRoutes() {
         res.status(400).json({ error: 'No files uploaded' })
         return
       }
-      const imageUrls = files.map(f => f.path)
+      // Return relative paths so browsers can load them via /api/images/*
+      const imageUrls = files.map(f => path.relative(IMAGE_BASE, f.path))
       res.status(201).json({ imageUrls })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
