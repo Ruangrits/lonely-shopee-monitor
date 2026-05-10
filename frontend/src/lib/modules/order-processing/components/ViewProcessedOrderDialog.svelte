@@ -2,6 +2,10 @@
   import type { Order } from '$lib/modules/dashboard/data'
   import type { LocalOrderState } from '../data'
 
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined'
+    ? `${window.location.protocol}//${window.location.hostname}:3001`
+    : 'http://localhost:3001')
+
   let { order, localState, onClose }: {
     order: Order
     localState: LocalOrderState
@@ -84,9 +88,23 @@
       {/if}
 
       {#if localState.imageUrls.length > 0}
-        <div class="flex items-center gap-2">
-          <span class="text-grey-200 text-xs">รูปแนบ:</span>
-          <span class="text-grey-400 text-sm font-medium">{localState.imageUrls.length} ใบ</span>
+        <div>
+          <div class="text-grey-200 text-xs mb-2">รูปแนบ ({localState.imageUrls.length} ใบ)</div>
+          <div class="grid grid-cols-3 gap-2">
+            {#each localState.imageUrls as url, i}
+              <button
+                class="w-full aspect-square rounded-lg overflow-hidden border border-grey-100 bg-grey-50"
+                onclick={() => window.open(`${API_BASE}/api/images/${url}`, '_blank', 'noopener,noreferrer')}
+                aria-label="ดูรูปภาพ {i + 1}"
+              >
+                <img
+                  src="{API_BASE}/api/images/{url}"
+                  alt="รูปแนบ {i + 1}"
+                  class="w-full h-full object-cover"
+                />
+              </button>
+            {/each}
+          </div>
         </div>
       {/if}
 
