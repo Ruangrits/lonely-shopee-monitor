@@ -67,7 +67,7 @@
 	}
 
 	onMount(() => {
-		loadData()
+		handleRefresh()
 	})
 </script>
 
