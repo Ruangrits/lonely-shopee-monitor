@@ -125,6 +125,12 @@
     }
   }
 
+  function reasonLabel(reason: string | undefined): string {
+    if (reason === 'out_of_stock') return 'สินค้าหมด'
+    if (reason === 'different_variant') return 'มีสินค้า (สี/ไซซ์/ขนาด) อื่น แต่แบบเดียวกัน'
+    return ''
+  }
+
   function formatTime(iso: string): string {
     if (!iso) return ''
     try {
@@ -235,11 +241,30 @@
     {:else}
       {#each displayedOrders as entry (entry.order.orderId)}
         <button
-          class="w-full text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary-300 rounded-xl"
+          class="w-full text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary-300 rounded-xl flex flex-col gap-1.5"
           onclick={() => selectedEntry = entry}
           aria-label="จัดการออเดอร์ {entry.order.orderId}"
         >
           <OrderCard order={entry.order} />
+          {#if entry.localState?.reason || entry.localState?.note}
+            <div class="w-full bg-white border border-grey-100 rounded-xl px-3 py-2 flex flex-col gap-1">
+              {#if entry.localState.reason}
+                {@const label = reasonLabel(entry.localState.reason)}
+                {#if label}
+                  <div class="flex items-start gap-1.5 text-xs">
+                    <span class="text-grey-200 shrink-0">สาเหตุ:</span>
+                    <span class="text-danger-200 font-medium">{label}</span>
+                  </div>
+                {/if}
+              {/if}
+              {#if entry.localState.note}
+                <div class="flex items-start gap-1.5 text-xs">
+                  <span class="text-grey-200 shrink-0">โน้ต:</span>
+                  <span class="text-grey-400">{entry.localState.note}</span>
+                </div>
+              {/if}
+            </div>
+          {/if}
         </button>
       {/each}
     {/if}
