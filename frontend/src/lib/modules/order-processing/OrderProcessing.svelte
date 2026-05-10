@@ -11,6 +11,10 @@
 
   interface ProcessedEntry { order: Order; localState: LocalOrderState }
 
+  let loggedIn = $state(false)
+  let loading = $state(true)
+  let initError = $state('')
+
   let shopeeOrders = $state<Order[]>([])
   let localStates = $state<LocalOrderState[]>([])
   let activeTab = $state<'pending' | 'with_stock' | 'no_stock'>('pending')
@@ -18,6 +22,7 @@
   let selectedProcessed = $state<ProcessedEntry | null>(null)
   let syncing = $state(false)
   let lastSyncedAt = $state('')
+  let syncError = $state('')
   let syncInterval: ReturnType<typeof setInterval> | null = null
 
   const stateMap = $derived(new Map(localStates.map(s => [s.orderId, s])))
@@ -40,8 +45,25 @@
     })
   )
 
+  async function init() {
+    loading = true
+    initError = ''
+    const either = await shopeeOrderService.getAuthStatus().promise
+    if (either.isRight) {
+      loggedIn = either.getRight().loggedIn
+      if (!loggedIn) {
+        initError = 'ยังไม่ได้ login Shopee — กรุณาตรวจสอบ SHOPEE_USERNAME/PASSWORD ใน .env แล้ว restart backend'
+      }
+    } else {
+      initError = 'ไม่สามารถเชื่อมต่อ backend ได้ — กรุณาตรวจสอบว่า backend กำลังทำงานอยู่'
+    }
+    loading = false
+  }
+
   async function sync() {
+    if (syncing) return
     syncing = true
+    syncError = ''
     try {
       const [ordersResult, statesResult] = await Promise.all([
         shopeeOrderService.refreshOrders().promise,
@@ -57,13 +79,14 @@
             platform: acc.platform,
           }))
         )
+      } else {
+        syncError = 'ดึงออเดอร์จาก Shopee ไม่สำเร็จ'
       }
 
-      if (statesResult.isRight) {
-        localStates = statesResult.getRight()
-      }
-
-      lastSyncedAt = new Date().toISOString()
+      if (statesResult.isRight) localStates = statesResult.getRight()
+      if (ordersResult.isRight || statesResult.isRight) lastSyncedAt = new Date().toISOString()
+    } catch {
+      syncError = 'เชื่อมต่อ backend ไม่ได้'
     } finally {
       syncing = false
     }
@@ -81,15 +104,39 @@
     } catch { return '' }
   }
 
-  onMount(() => {
-    sync()
-    syncInterval = setInterval(sync, 5 * 60 * 1000)
+  onMount(async () => {
+    await init()
+    if (loggedIn) {
+      sync()
+      syncInterval = setInterval(sync, 5 * 60 * 1000)
+    }
   })
 
   onDestroy(() => {
-    if (syncInterval) clearInterval(syncInterval)
+    if (syncInterval) { clearInterval(syncInterval); syncInterval = null }
   })
 </script>
+
+{#if loading}
+  <div class="flex items-center justify-center min-h-screen">
+    <div class="flex flex-col items-center gap-3">
+      <div class="w-8 h-8 border-3 border-primary-300 border-t-transparent rounded-full animate-spin"></div>
+      <div class="text-sm text-grey-300">กำลังเชื่อมต่อ Shopee...</div>
+    </div>
+  </div>
+{:else if !loggedIn}
+  <div class="flex items-center justify-center min-h-screen">
+    <div class="max-w-md p-6 bg-white rounded-xl shadow-lg text-center">
+      <div class="flex flex-col gap-4">
+        <div class="text-lg font-bold text-grey-400">จัดการคำสั่งซื้อ</div>
+        <div class="p-3 bg-danger-50 text-danger-200 rounded-lg text-sm">{initError}</div>
+        <div class="text-xs text-grey-200">
+          ตั้งค่า SHOPEE_USERNAME และ SHOPEE_PASSWORD ในไฟล์ backend/.env แล้ว restart backend
+        </div>
+      </div>
+    </div>
+  </div>
+{:else}
 
 <div class="min-h-screen bg-grey-50 p-3 sm:p-6">
   <div class="max-w-3xl mx-auto">
@@ -97,7 +144,9 @@
     <div class="flex justify-between items-start gap-2 mb-5 sm:mb-6">
       <div>
         <h1 class="text-xl sm:text-2xl font-bold text-grey-400">จัดการคำสั่งซื้อ</h1>
-        {#if lastSyncedAt}
+        {#if syncError}
+          <div class="text-xs text-danger-200 mt-0.5">{syncError}</div>
+        {:else if lastSyncedAt}
           <span class="text-grey-200 text-xs mt-1">อัปเดต: {formatTime(lastSyncedAt)}</span>
         {/if}
       </div>
@@ -134,7 +183,7 @@
             <button
               class="w-full text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary-300 rounded-xl"
               onclick={() => selectedPending = order}
-              aria-label="กดเพื่อดำเนินการออเดอร์ #{order.orderId}"
+              aria-label="กดเพื่อดำเนินการออเดอร์ {order.orderId}"
             >
               <OrderCard {order} />
             </button>
@@ -152,7 +201,7 @@
             <button
               class="w-full text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-success-100 rounded-xl"
               onclick={() => selectedProcessed = entry}
-              aria-label="ดูรายละเอียดออเดอร์ #{entry.order.orderId}"
+              aria-label="ดูรายละเอียดออเดอร์ {entry.order.orderId}"
             >
               <OrderCard order={entry.order} />
             </button>
@@ -170,7 +219,7 @@
             <button
               class="w-full text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-danger-100 rounded-xl"
               onclick={() => selectedProcessed = entry}
-              aria-label="ดูรายละเอียดออเดอร์ #{entry.order.orderId}"
+              aria-label="ดูรายละเอียดออเดอร์ {entry.order.orderId}"
             >
               <OrderCard order={entry.order} />
             </button>
@@ -196,4 +245,6 @@
     localState={selectedProcessed.localState}
     onClose={() => selectedProcessed = null}
   />
+{/if}
+
 {/if}
