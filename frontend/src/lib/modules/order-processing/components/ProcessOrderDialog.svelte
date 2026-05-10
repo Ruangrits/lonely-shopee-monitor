@@ -230,7 +230,7 @@
           <label for="order-note" class="block text-grey-300 text-xs mb-1.5">โน้ต (ไม่บังคับ)</label>
           <textarea
             id="order-note"
-            class="w-full border border-grey-200 rounded-lg px-3 py-2 text-sm text-grey-400 resize-none focus:outline-none focus:border-primary-300"
+            class="w-full border border-grey-200 rounded-lg px-3 py-2 text-base text-grey-400 resize-none focus:outline-none focus:border-primary-300"
             rows={2}
             placeholder="เพิ่มข้อความสำหรับออเดอร์นี้..."
             bind:value={note}
