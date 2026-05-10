@@ -1,5 +1,6 @@
 <script lang="ts">
   import { adminService } from '../admin.service'
+  import ImageLightbox from '$lib/components/ImageLightbox.svelte'
 
   let { orderId, existingImageUrls, onSave, onClose }: {
     orderId: string
@@ -17,6 +18,8 @@
   let pendingPreviews = $state<string[]>([])
   let saving = $state(false)
   let errorMsg = $state('')
+  let lightboxUrl = $state<string | null>(null)
+  let lightboxAlt = $state('')
 
   $effect(() => {
     return () => {
@@ -94,7 +97,7 @@
             <div class="relative">
               <button
                 class="w-full aspect-square rounded-lg overflow-hidden border border-grey-100 block bg-grey-50"
-                onclick={() => window.open(`${API_BASE}/api/images/${url}`, '_blank', 'noopener,noreferrer')}
+                onclick={() => { lightboxUrl = `${API_BASE}/api/images/${url}`; lightboxAlt = `รูปภาพ ${i + 1}` }}
                 aria-label="ดูรูปภาพ {i + 1}"
               >
                 <img
@@ -180,3 +183,7 @@
     </div>
   </div>
 </div>
+
+{#if lightboxUrl}
+  <ImageLightbox src={lightboxUrl} alt={lightboxAlt} onClose={() => lightboxUrl = null} />
+{/if}

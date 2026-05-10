@@ -53,7 +53,7 @@ const upload = multer({
   },
 })
 
-const VALID_STATES = ['with_stock', 'no_stock', 'admin_completed']
+const VALID_STATES = ['pending', 'with_stock', 'no_stock', 'admin_completed']
 const VALID_REASONS = ['out_of_stock', 'different_variant']
 const SAFE_ID = /^[a-zA-Z0-9_-]+$/
 

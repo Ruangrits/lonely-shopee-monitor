@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Order } from '$lib/modules/dashboard/data'
   import type { LocalOrderState } from '../data'
+  import ImageLightbox from '$lib/components/ImageLightbox.svelte'
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined'
     ? `${window.location.protocol}//${window.location.hostname}:3001`
@@ -11,6 +12,9 @@
     localState: LocalOrderState
     onClose: () => void
   } = $props()
+
+  let lightboxUrl = $state<string | null>(null)
+  let lightboxAlt = $state('')
 
   const stateLabel = $derived(localState.state === 'with_stock' ? 'มีของ' : 'ไม่มีของ')
   const stateStyle = $derived(
@@ -94,7 +98,7 @@
             {#each localState.imageUrls as url, i}
               <button
                 class="w-full aspect-square rounded-lg overflow-hidden border border-grey-100 bg-grey-50"
-                onclick={() => window.open(`${API_BASE}/api/images/${url}`, '_blank', 'noopener,noreferrer')}
+                onclick={() => { lightboxUrl = `${API_BASE}/api/images/${url}`; lightboxAlt = `รูปแนบ ${i + 1}` }}
                 aria-label="ดูรูปภาพ {i + 1}"
               >
                 <img
@@ -123,3 +127,7 @@
 
   </div>
 </div>
+
+{#if lightboxUrl}
+  <ImageLightbox src={lightboxUrl} alt={lightboxAlt} onClose={() => lightboxUrl = null} />
+{/if}

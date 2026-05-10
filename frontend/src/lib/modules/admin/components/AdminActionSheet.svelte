@@ -11,26 +11,66 @@
     onUpdated: () => void
   } = $props()
 
-  type SheetMode = 'main' | 'change_status'
+  type SheetMode = 'main' | 'change_status' | 'move_to_pending' | 'add_note'
   let mode = $state<SheetMode>('main')
   let newState = $state<'with_stock' | 'no_stock'>('with_stock')
   let newReason = $state<NoStockReason | ''>('')
   let newNote = $state(localState?.note ?? '')
+  let pendingNote = $state('')
   let submitting = $state(false)
   let errorMsg = $state('')
   let showImageManager = $state(false)
 
   const orderState = $derived(localState?.state ?? 'pending')
 
-  async function markPending() {
+  async function confirmMoveToPending() {
     submitting = true
     errorMsg = ''
     try {
-      const result = await adminService.deleteOrderState(order.orderId).promise
-      if (result.isRight) {
-        onUpdated()
+      const note = pendingNote.trim()
+      if (note) {
+        const payload = { state: 'pending' as const, imageUrls: localState?.imageUrls ?? [], note }
+        const result = localState
+          ? await adminService.updateOrderState(order.orderId, payload).promise
+          : await adminService.createOrderState(order.orderId, payload).promise
+        if (result.isRight) onUpdated()
+        else errorMsg = 'ดำเนินการไม่สำเร็จ'
       } else {
-        errorMsg = 'ดำเนินการไม่สำเร็จ'
+        if (localState) {
+          const result = await adminService.deleteOrderState(order.orderId).promise
+          if (result.isRight) onUpdated()
+          else errorMsg = 'ดำเนินการไม่สำเร็จ'
+        } else {
+          onUpdated()
+        }
+      }
+    } catch {
+      errorMsg = 'เกิดข้อผิดพลาด'
+    } finally {
+      submitting = false
+    }
+  }
+
+  async function confirmAddNote() {
+    submitting = true
+    errorMsg = ''
+    try {
+      const note = pendingNote.trim()
+      if (note) {
+        const payload = { state: 'pending' as const, imageUrls: localState?.imageUrls ?? [], note }
+        const result = localState
+          ? await adminService.updateOrderState(order.orderId, payload).promise
+          : await adminService.createOrderState(order.orderId, payload).promise
+        if (result.isRight) onUpdated()
+        else errorMsg = 'ดำเนินการไม่สำเร็จ'
+      } else {
+        if (localState) {
+          const result = await adminService.deleteOrderState(order.orderId).promise
+          if (result.isRight) onUpdated()
+          else errorMsg = 'ดำเนินการไม่สำเร็จ'
+        } else {
+          onUpdated()
+        }
       }
     } catch {
       errorMsg = 'เกิดข้อผิดพลาด'
@@ -151,12 +191,16 @@
               disabled={submitting}
               onclick={markAdminCompleted}
             >✓ ดำเนินการหลังบ้านแล้ว</button>
+            <button
+              class="text-left px-4 py-3 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-xl text-sm font-semibold hover:bg-yellow-100 transition-colors"
+              onclick={() => { mode = 'add_note'; pendingNote = localState?.note ?? ''; errorMsg = '' }}
+            >📝 {localState?.note ? 'แก้ไขโน้ต' : 'เพิ่มโน้ต'}</button>
 
           {:else if orderState === 'with_stock' || orderState === 'no_stock'}
             <button
               class="text-left px-4 py-3 bg-orange-50 text-orange-700 border border-orange-200 rounded-xl text-sm font-semibold hover:bg-orange-100 transition-colors disabled:opacity-50"
               disabled={submitting}
-              onclick={markPending}
+              onclick={() => { mode = 'move_to_pending'; pendingNote = ''; errorMsg = '' }}
             >↩ ย้ายกลับรอดำเนินการ</button>
             <button
               class="text-left px-4 py-3 bg-success-50 text-success-200 border border-success-100 rounded-xl text-sm font-semibold hover:bg-success-100 transition-colors disabled:opacity-50"
@@ -181,7 +225,7 @@
             <button
               class="text-left px-4 py-3 bg-orange-50 text-orange-700 border border-orange-200 rounded-xl text-sm font-semibold hover:bg-orange-100 transition-colors disabled:opacity-50"
               disabled={submitting}
-              onclick={markPending}
+              onclick={() => { mode = 'move_to_pending'; pendingNote = ''; errorMsg = '' }}
             >↩ ย้ายกลับรอดำเนินการ</button>
           {/if}
 
@@ -191,8 +235,60 @@
           >ยกเลิก</button>
         </div>
 
+      {:else if mode === 'move_to_pending'}
+        <div class="flex items-center gap-2 mb-4">
+          <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { mode = 'main'; errorMsg = '' }} aria-label="กลับ">← กลับ</button>
+          <span class="text-grey-400 font-semibold text-sm">ย้ายกลับรอดำเนินการ</span>
+        </div>
+
+        <div class="mb-4">
+          <label for="pending-reason" class="block text-grey-300 text-xs mb-1.5">สาเหตุที่ย้ายกลับ (ไม่บังคับ)</label>
+          <textarea
+            id="pending-reason"
+            class="w-full border border-grey-200 rounded-lg px-3 py-2 text-base text-grey-400 resize-none focus:outline-none focus:border-primary-300"
+            rows={2}
+            placeholder="ระบุสาเหตุ..."
+            bind:value={pendingNote}
+          ></textarea>
+        </div>
+
+        <button
+          class="w-full py-3 rounded-xl font-semibold text-sm transition-colors
+            {submitting ? 'bg-grey-100 text-grey-300 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 text-white'}"
+          disabled={submitting}
+          onclick={confirmMoveToPending}
+        >
+          {submitting ? 'กำลังบันทึก...' : 'ยืนยัน'}
+        </button>
+
+      {:else if mode === 'add_note'}
+        <div class="flex items-center gap-2 mb-4">
+          <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { mode = 'main'; errorMsg = '' }} aria-label="กลับ">← กลับ</button>
+          <span class="text-grey-400 font-semibold text-sm">โน้ต</span>
+        </div>
+
+        <div class="mb-4">
+          <label for="add-note-input" class="block text-grey-300 text-xs mb-1.5">โน้ต</label>
+          <textarea
+            id="add-note-input"
+            class="w-full border border-grey-200 rounded-lg px-3 py-2 text-base text-grey-400 resize-none focus:outline-none focus:border-primary-300"
+            rows={3}
+            placeholder="เพิ่มข้อความสำหรับออเดอร์นี้..."
+            bind:value={pendingNote}
+          ></textarea>
+        </div>
+
+        <button
+          class="w-full py-3 rounded-xl font-semibold text-sm transition-colors
+            {submitting ? 'bg-grey-100 text-grey-300 cursor-not-allowed' : 'bg-primary-400 hover:bg-primary-500 text-white'}"
+          disabled={submitting}
+          onclick={confirmAddNote}
+        >
+          {submitting ? 'กำลังบันทึก...' : 'บันทึก'}
+        </button>
+
       {:else}
-        <!-- Inline change-status section -->
+        <!-- change_status mode -->
         <div class="flex items-center gap-2 mb-4">
           <button class="text-grey-300 text-sm hover:text-grey-400" onclick={() => { mode = 'main'; errorMsg = '' }} aria-label="กลับ">← กลับ</button>
           <span class="text-grey-400 font-semibold text-sm">เปลี่ยน status</span>

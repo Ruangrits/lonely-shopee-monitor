@@ -3,7 +3,7 @@ import path from 'path'
 
 export interface LocalOrderState {
   orderId: string
-  state: 'with_stock' | 'no_stock' | 'admin_completed'
+  state: 'pending' | 'with_stock' | 'no_stock' | 'admin_completed'
   reason?: 'out_of_stock' | 'different_variant'
   imageUrls: string[]
   note?: string

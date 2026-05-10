@@ -28,7 +28,10 @@
   const stateMap = $derived(new Map(localStates.map(s => [s.orderId, s])))
 
   const pendingOrders = $derived(
-    shopeeOrders.filter(o => o.status === 'ยังไม่ดำเนินการ' && !stateMap.has(o.orderId))
+    shopeeOrders.filter(o => {
+      const ls = stateMap.get(o.orderId)
+      return o.status === 'ยังไม่ดำเนินการ' && (!ls || ls.state === 'pending')
+    })
   )
 
   const withStockOrders = $derived(
@@ -157,7 +160,7 @@
         aria-label={syncing ? 'กำลังซิงก์...' : 'ซิงก์ข้อมูล'}
         aria-busy={syncing}
       >
-        {syncing ? '...' : 'Sync'}
+        {syncing ? '...' : 'โหลดใหม่'}
       </button>
     </div>
 
@@ -180,12 +183,19 @@
           </div>
         {:else}
           {#each pendingOrders as order (order.orderId)}
+            {@const ls = stateMap.get(order.orderId)}
             <button
-              class="w-full text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary-300 rounded-xl"
+              class="w-full text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary-300 rounded-xl flex flex-col gap-1.5"
               onclick={() => selectedPending = order}
               aria-label="กดเพื่อดำเนินการออเดอร์ {order.orderId}"
             >
               <OrderCard {order} />
+              {#if ls?.note}
+                <div class="w-full bg-white border border-grey-100 rounded-xl px-3 py-2 text-xs flex items-start gap-1.5">
+                  <span class="text-grey-200 shrink-0">โน้ต:</span>
+                  <span class="text-grey-400">{ls.note}</span>
+                </div>
+              {/if}
             </button>
           {/each}
         {/if}

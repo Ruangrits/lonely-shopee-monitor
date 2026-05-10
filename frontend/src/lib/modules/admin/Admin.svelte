@@ -31,8 +31,8 @@
 
   const pendingOrders = $derived(
     shopeeOrders
-      .filter(o => !stateMap.has(o.orderId))
-      .map(o => ({ order: o, localState: null }) satisfies OrderEntry)
+      .filter(o => { const ls = stateMap.get(o.orderId); return !ls || ls.state === 'pending' })
+      .map(o => ({ order: o, localState: stateMap.get(o.orderId) ?? null }) satisfies OrderEntry)
   )
 
   const withStockOrders = $derived(
